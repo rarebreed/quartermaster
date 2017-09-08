@@ -1,0 +1,36 @@
+{
+  "name": "quartermaster",
+  "version": "0.1.0",
+  "description": "Manages entitlements to software packages as a front end to candlepin",
+  "main": "index.js",
+  "author": "Sean Toner",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-core": "^6.26.0",
+    "babel-loader": "^7.1.2",
+    "babel-preset-env": "^1.6.0",
+    "babel-preset-flow": "^6.23.0",
+    "copy-webpack-plugin": "^4.0.1",
+    "css-loader": "^0.28.7",
+    "flow-bin": "^0.54.0",
+    "jasmine": "^2.8.0",
+    "style-loader": "^0.18.2",
+    "webpack": "^3.5.5",
+    "webpack-dev-server": "^2.7.1"
+  },
+  "dependencies": {
+    "@cycle/dom": "^18.2.0",
+    "@cycle/run": "^3.2.0",
+    "@cycle/rxjs-run": "^7.1.0",
+    "babel-plugin-transform-react-jsx": "^6.24.1",
+    "immutable": "^3.8.1",
+    "rxjs": "^5.4.3",
+    "snabbdom-jsx": "^0.3.1"
+  },
+  "scripts": {
+    "build": "webpack",
+    "watch": "webpack --watch",
+    "flow-src": "babel src -d build/src --source-maps inline"
+  }
+}

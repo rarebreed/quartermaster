@@ -1,0 +1,6 @@
+*~
+*.retry
+node_modules/
+build/
+lib/
+jasmine/

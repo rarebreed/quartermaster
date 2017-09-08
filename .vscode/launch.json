@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch flow program",
+            "type": "node",
+            "request": "launch",
+            "sourceMaps": true,
+            "preLaunchTask": "flow-src",
+            "program": "${file}",
+            "outFiles": [
+                "${workspaceRoot}/build/src/**/*.js"
+            ]
+        }
+    ]
+}

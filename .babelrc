@@ -1,0 +1,9 @@
+{
+    "presets": ["env", "flow"],
+    "plugins": [
+        "syntax-jsx",
+        ["transform-react-jsx", {"pragma": "html"}]
+    ], 
+    "sourceMaps": true,
+    "retainLines": true
+}
