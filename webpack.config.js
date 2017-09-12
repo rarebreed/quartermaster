@@ -1,22 +1,16 @@
 const path = require("path");
 const copy = require("copy-webpack-plugin");
 
-
-
-module.exports = {
-    devtool: "source-map",
-    entry: ["./src/app/index.js"],
-    externals: {"cockpit": "cockpit"},
-    output: {
-        filename: "bundle.js",
-        path: path.resolve(__dirname, "build"),
-        sourceMapFilename: "[file].map"
-    },
-    devServer: {
-        contentBase: "./build",
-        port: 9000
-    },
-    plugins: [new copy([
+// For testing, do export QUARTERMASTER_TESTING=true
+// This will cause the files to be built
+const TESTING = process.env.NODE_ENV === "testing";
+const contentBase = TESTING ? "./test" : "./build";
+const outpath = TESTING ? "test" : "build";
+const entrypt = TESTING ? "./src/components/generic-view.js" : "./src/app/index.js";
+const outfile = TESTING ? "test.js" : "app.js";
+let copied = [];
+if (!TESTING) {
+    copied = [new copy([
         {
             from: "./src/app/index.html",
         },
@@ -42,13 +36,34 @@ module.exports = {
             from: './node_modules/jasmine-core/lib/jasmine-core/boot.js',
             to: "../jasmine/boot.js"
         }
-    ])],
+    ])];
+}
+
+module.exports = {
+    devtool: "source-map",
+    entry: [ entrypt ],
+    externals: {"cockpit": "cockpit"},
+    output: {
+        filename: outfile,
+        path: path.resolve(__dirname, outpath),
+        sourceMapFilename: "[file].map"
+    },
+    devServer: {
+        contentBase: contentBase,
+        port: 9000
+    },
+    plugins: copied,
     module: {
         rules: [
             {
                 exclude: /node_modules/,
                 loader: 'babel-loader',
                 test: /\.jsx?$/
+            },
+            {
+                exclude: /node_modules/,
+                loader: 'style-loader!css-loader',
+                test: /\.css$/
             }
         ]
     }

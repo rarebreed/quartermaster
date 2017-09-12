@@ -13,7 +13,7 @@ import { run } from '@cycle/run';
 import { div, input, button, h1, hr, label, makeDOMDriver } from "@cycle/dom";
 import {html} from 'snabbdom-jsx';
 import { StatusView } from "../components/status-view.jsx"
-import * as status from "../dbus/status";
+import * as status from "../lib/status";
 const cockpit = require("cockpit");
 const Obs = Rx.Observable;
 
@@ -32,23 +32,34 @@ type ProductDetails = {
 }
 
 
-function getStatus(init: string) {
+function getStatus() {
     let stat = status.getStatus();
     return Obs.fromPromise(stat);
 }
 
+/**
+ * Listens for action on the (Un)Register button
+ * @param {*} domSource 
+ */
+function registrationIntent(domSource) {
+    return domSource.select("#registration-btn")
+      .events("click")
+      .filter(evt => evt.button !== 2);
+}
 
-function sView(status: EntitlementStatus) {
-    return div([
-                label([`Status: the system is ${status}`]),
-                button("register-btn", "Register")
-            ])
+/**
+ * Maintains the registration state in this stream
+ * @param {*} action$ 
+ */
+function registerModel(action$: Rx.Observable) {
+    return action$.map(e => {
+        
+    })
 }
 
 
 function main(sources) {
-    // TODO: Replace with entitlement status dbus method
-    let status$ = getStatus("unregistering");
+    let status$ = getStatus();
     return {
         DOM: status$.map(s => StatusView(s))
     }
