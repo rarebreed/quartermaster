@@ -5,38 +5,68 @@
  * - intent: reads from a DOM source to get events
  * - model(state): takes the event data and does something with the data
  * - view: writes a new DOM interface to be rendered 
+ * 
+ * Conventions:
+ * - The functions which create views (ie vdom elements) should be UpperCase
+ * - Variables which are streams should end in $
+ *   - A stream of streams:  multiStream$$
  */
-import { div, input, label, button, tr, td, span, makeDOMDriver } from "@cycle/dom";
+import { div, input, label, button, tr, td, span, makeDOMDriver, DOMSource } from "@cycle/dom";
+import { VNode } from "@cycle/dom";
 import { run } from "@cycle/rxjs-run";
 import Rx from "rxjs/Rx";
 //const cockpit = require("cockpit");
 //const _ = cockpit.gettext;
 const _ = v => v;
 
-function textInputIntent(input) {
-    let dom$ = input.DOM;
-    let label = dom$.select(".label");
-    console.log(label);
-    return label.events("input");
+type LabelInputProps = {
+    name: string, 
+    initial: string
+}
+
+type SliderInputProps = {
+    label: LabelInputProps,
+    min: number,
+    max: number,
+    unit: string
+}
+
+type LabelInputSources = {
+    DOM: DOMSource,
+    props$: Rx.Observable<LabelInputProps>
+}
+
+function textInputIntent(domSrc) {
+    return domSrc.select(".label").events("input").map(evt => evt.target.value);
 }
 
 // What to do with the inputs
 // TODO: Make this take another function which will be passed to map
-function inputState(inpEvts: Rx.Observable) {
+function inputState(start: string, inpEvts: Rx.Observable) {
     return inpEvts.map(evt => {
         let value = evt.target.value;
         console.log(value);
         return value;
-    }).startWith("Sean");
+    }).startWith(start);
 }
 
-function TextInputView(state$: Rx.Observable) {
-    return state$.map(s => {
+function textInputView(props$: Rx.Observable<LabelInputProps>, state$: Rx.Observable<string>) {
+    return props$.merge(state$).map(s => {
         return div(".labeled-input",[
             label(".label", s),
             input(".input", {attrs: {type: "text"}})
         ]);
     })
+}
+
+export function TextInput(sources: LabelInputSources) {
+    const intent$ = textInputIntent(sources.DOM);
+    const model$ = inputState("Sean", intent$);
+    const view$ = textInputView(model$);
+
+    return {
+        DOM: view$
+    }
 }
 
 
@@ -55,9 +85,7 @@ const drivers = {
 }
 
 function test(sources) {
-    const intent$ = textInputIntent(sources);
-    const model$ = inputState(intent$);
-    const view$ = TextInputView(model$);
+    const Tinput = TextInput()
 
     return {
         DOM: view$
