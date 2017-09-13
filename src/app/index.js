@@ -53,13 +53,14 @@ function registrationIntent(domSource) {
  */
 function registerModel(action$: Rx.Observable) {
     return action$.map(e => {
-        
+
     })
 }
 
 
 function main(sources) {
     let status$ = getStatus();
+    
     return {
         DOM: status$.map(s => StatusView(s))
     }

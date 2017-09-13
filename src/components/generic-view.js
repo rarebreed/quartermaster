@@ -51,18 +51,20 @@ function inputState(start: string, inpEvts: Rx.Observable) {
 }
 
 function textInputView(props$: Rx.Observable<LabelInputProps>, state$: Rx.Observable<string>) {
-    return props$.merge(state$).map(s => {
-        return div(".labeled-input",[
-            label(".label", s),
-            input(".input", {attrs: {type: "text"}})
-        ]);
-    })
+    // To bad rxjs doesn't have something like xstream's combine operator. combineAll is not the same
+    props$.mergeMap(p => state$.map(s => 
+            div(".labeled-input",[
+                label(".label", s),
+                input(".input", {attrs: {type: "text", defaultValue: p.initial}})
+            ])
+        )
+    )
 }
 
 export function TextInput(sources: LabelInputSources) {
     const intent$ = textInputIntent(sources.DOM);
     const model$ = inputState("Sean", intent$);
-    const view$ = textInputView(model$);
+    const view$ = textInputView(sources.props$, model$);
 
     return {
         DOM: view$
@@ -85,10 +87,11 @@ const drivers = {
 }
 
 function test(sources) {
-    const Tinput = TextInput()
+    const props$ = Rx.Observable.of({name: "foo", initial: "Sean"});
+    const tinput$ = TextInput({DOM: sources.DOM, props$: props$})
 
     return {
-        DOM: view$
+        DOM: tinput$
     }
 }
 
