@@ -4,7 +4,7 @@ const copy = require("copy-webpack-plugin");
 // For testing, do export QUARTERMASTER_TESTING=true
 // This will cause the files to be built
 const TESTING = process.env.NODE_ENV === "testing";
-const contentBase = TESTING ? "./spec" : "./build";
+const contentBase = "." //TESTING ? "./spec" : "./build";
 const outpath = "build";  //TESTING ? "spec" : "build";
 const componentsTest = "./spec/components.test.js";
 const genericTest = "./src/components/generic-view.js";
@@ -52,7 +52,7 @@ module.exports = {
     },
     devServer: {
         contentBase: contentBase,
-        port: 9000
+        port: 9001
     },
     plugins: copied,
     module: {

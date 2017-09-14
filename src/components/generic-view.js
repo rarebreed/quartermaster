@@ -14,6 +14,8 @@
 import { div, input, label, button, tr, td, span, makeDOMDriver, DOMSource } from "@cycle/dom";
 import { VNode } from "@cycle/dom";
 import { run } from "@cycle/rxjs-run";
+//import xs, { Stream, MemoryStream } from "xstream";
+//import { run } from "@cycle/run";
 import Rx from "rxjs/Rx";
 //const cockpit = require("cockpit");
 //const _ = cockpit.gettext;
@@ -37,33 +39,40 @@ type LabelInputSources = {
 }
 
 function textInputIntent(domSrc) {
-    return domSrc.select(".label").events("input").map(evt => evt.target.value);
+    return domSrc.select(".input")
+      .events("input")
+      .map(evt => evt.target.value);
 }
 
-// What to do with the inputs
-// TODO: Make this take another function which will be passed to map
-function inputState(start: string, inpEvts: Rx.Observable) {
-    return inpEvts.map(evt => {
-        let value = evt.target.value;
-        console.log(value);
-        return value;
-    }).startWith(start);
+
+function inputState(fn: (v: string) => any,inpEvts: any) {
+    return inpEvts.map(fn)
+      .startWith("");
 }
 
+/**
+ * Creates the actual DOM component for the labeled input
+ * 
+ * FIXME:  Everytime someone enters text in the field, the div will be redrawn which seems like a performance waste.
+ * 
+ * @param {*} props$ 
+ * @param {*} state$ 
+ */
 function textInputView(props$: Rx.Observable<LabelInputProps>, state$: Rx.Observable<string>) {
-    // To bad rxjs doesn't have something like xstream's combine operator. combineAll is not the same
-    props$.mergeMap(p => state$.map(s => 
+    // I couldn't find an equivalent of xstream's combine operator in rxjs.  But this should do what I want
+    return props$.do(i => console.log(i)).mergeMap(p => {
+        return state$.map(s => 
             div(".labeled-input",[
-                label(".label", s),
+                label(".label", p.name),
                 input(".input", {attrs: {type: "text", defaultValue: p.initial}})
             ])
         )
-    )
+    })
 }
 
-export function TextInput(sources: LabelInputSources) {
+export function TextInput(hdlr: (v: string) => any, sources: LabelInputSources) {
     const intent$ = textInputIntent(sources.DOM);
-    const model$ = inputState("Sean", intent$);
+    const model$ = inputState(hdlr, intent$);
     const view$ = textInputView(sources.props$, model$);
 
     return {
@@ -71,6 +80,23 @@ export function TextInput(sources: LabelInputSources) {
     }
 }
 
+const drivers = {
+    DOM: makeDOMDriver("#test")
+}
+
+function test(sources) {
+    const props$ = Rx.Observable.of({
+        name: "foo", 
+        initial: "Sean",
+    });
+    const tinput$ = TextInput((val) => val, {DOM: sources.DOM, props$: props$})
+
+    return {
+        DOM: tinput$.DOM
+    }
+}
+
+run(test, drivers);
 
 export function makeTableRow(row: string, value: string) {
     return tr([
@@ -81,19 +107,3 @@ export function makeTableRow(row: string, value: string) {
     ])
     //return <tr key={row}><td className="form-tr-ct-title">{_(row)}</td><td><span>{value}</span></td></tr>
 }
-
-const drivers = {
-    DOM: makeDOMDriver("#test")
-}
-
-function test(sources) {
-    const props$ = Rx.Observable.of({name: "foo", initial: "Sean"});
-    const tinput$ = TextInput({DOM: sources.DOM, props$: props$})
-
-    return {
-        DOM: tinput$
-    }
-}
-
-
-run(test, drivers);

@@ -26,7 +26,8 @@
     "babel-plugin-transform-react-jsx": "^6.24.1",
     "immutable": "^3.8.1",
     "rxjs": "^5.4.3",
-    "snabbdom-jsx": "^0.3.1"
+    "snabbdom-jsx": "^0.3.1",
+    "xstream": "^10.9.0"
   },
   "scripts": {
     "build": "webpack",
