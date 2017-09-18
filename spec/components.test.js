@@ -12,17 +12,19 @@ const drivers = {
     DOM: makeDOMDriver("#test")
 }
 
-function miniTest(Component, sources) {
-    const comp = Component(sources.DOM);
+function testFactory(Component) {
+    return (sources) => {
+        const comp = Component(val => val, sources.DOM);
 
-    return {
-        DOM: comp
+        return {
+            DOM: comp
+        }
     }
 }
 
 describe("Generic labeled input", function() {
     it("Verifies the component is created", function() {
+        let miniTest = testFactory(gen.TextInput)
         run(miniTest, drivers);
-
     })
 })

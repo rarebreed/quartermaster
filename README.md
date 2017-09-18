@@ -51,3 +51,32 @@ via the script tag, which in turn means that when your browser loads the html pa
 cockpit.js file within the browser's global environment.
 
 So basically, the unit/integration tests for quartermaster will be run as its own plugin from within cockpit itself!
+
+# Notes on the quartermaster cockpit plugin
+
+I've been finding it very confusing figuring out the relative paths of files that need to referenced by either the 
+main html file (eg index.html for the quartermaster plugin and SpecRunner.html for the quartermaster-test.html) or in 
+the webpack.config.js file.  Here are some notes.
+
+## The linked files from ~/.local/share/cockpit
+
+Whatever you have linked to ~/.local/share/cockpit/your-plugin is your base path.  The html file that you use here 
+will reference this path.  The cockpit server will _give_ you the base1/ and * directories so that in your html file
+you can source include them.  For example, in quartermaster, the quartermaster plugin will be called based on the build
+directory.  If you do:
+
+```
+ls -al ~/.local/share/cockpit/quartermaster
+lrwxrwxrwx. 1 stoner stoner 41 Sep  7 08:32 /home/stoner/.local/share/cockpit/quartermaster -> /home/stoner/Projects/quartermaster/build
+```
+
+So in the build/index.html, we can source link the source modules like this:
+
+```html5
+<!-- The cockpit server will use the symlink so that it also includes these files -->
+<script type="text/javascript" src="../base1/cockpit.js"></script>
+<script type="text/javascript" src="../*/po.js"></script>
+
+<!-- The app.js file is in the build directory, and the build directory is our starting path, so we use "." -->
+<script type="text/javascript" src="./app.js"></script>
+```

@@ -58,9 +58,10 @@ function inputState(fn: (v: string) => any,inpEvts: any) {
  * @param {*} props$ 
  * @param {*} state$ 
  */
-function textInputView(props$: Rx.Observable<LabelInputProps>, state$: Rx.Observable<string>) {
-    // I couldn't find an equivalent of xstream's combine operator in rxjs.  But this should do what I want
-    return props$.do(i => console.log(i)).mergeMap(p => {
+function textInputView( props$: Rx.Observable<LabelInputProps>
+                      , state$: Rx.Observable<string>)
+                      : Rx.Observable<string> {
+    return props$.mergeMap(p => {
         return state$.map(s => 
             div(".labeled-input",[
                 label(".label", p.name),
@@ -70,6 +71,15 @@ function textInputView(props$: Rx.Observable<LabelInputProps>, state$: Rx.Observ
     })
 }
 
+/**
+ * A generic widget component with a Label, and an input text field.
+ * 
+ * The user will supply a function that takes a string and returns some other value.  This hdlr function is how other 
+ * business logic can be handled when the user types something into the input field.
+ * 
+ * @param {*} hdlr 
+ * @param {*} sources 
+ */
 export function TextInput(hdlr: (v: string) => any, sources: LabelInputSources) {
     const intent$ = textInputIntent(sources.DOM);
     const model$ = inputState(hdlr, intent$);
@@ -80,23 +90,6 @@ export function TextInput(hdlr: (v: string) => any, sources: LabelInputSources) 
     }
 }
 
-const drivers = {
-    DOM: makeDOMDriver("#test")
-}
-
-function test(sources) {
-    const props$ = Rx.Observable.of({
-        name: "foo", 
-        initial: "Sean",
-    });
-    const tinput$ = TextInput((val) => val, {DOM: sources.DOM, props$: props$})
-
-    return {
-        DOM: tinput$.DOM
-    }
-}
-
-run(test, drivers);
 
 export function makeTableRow(row: string, value: string) {
     return tr([
