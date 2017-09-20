@@ -98,5 +98,13 @@ export function makeTableRow(row: string, value: string) {
             span(_)
         ])
     ])
-    //return <tr key={row}><td className="form-tr-ct-title">{_(row)}</td><td><span>{value}</span></td></tr>
+    /**
+     * JSX version
+     * return (
+     *   <tr key={row}>
+     *     <td className="form-tr-ct-title">{_(row)}</td>
+     *     <td><span>{value}</span></td>
+     *   </tr>
+     * );
+     */
 }

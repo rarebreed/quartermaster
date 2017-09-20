@@ -12,7 +12,8 @@ import Rx from "rxjs/Rx";
 import { run } from '@cycle/run';
 import { div, input, button, h1, hr, label, makeDOMDriver } from "@cycle/dom";
 import {html} from 'snabbdom-jsx';
-import { StatusView } from "../components/status-view.jsx"
+import { StatusView } from "../components/status-view.jsx";
+import { TextInput } from "../components/generic-view";
 import * as status from "../lib/status";
 const cockpit = require("cockpit");
 const Obs = Rx.Observable;
@@ -57,9 +58,12 @@ function registerModel(action$: Rx.Observable) {
     })
 }
 
-
+// ====================================================
+// Entry point to our main app
+// ====================================================
 function main(sources) {
     let status$ = getStatus();
+    let label$ = TextInput(val => val, sources.DOM)
     
     return {
         DOM: status$.map(s => StatusView(s))
