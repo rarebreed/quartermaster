@@ -7,7 +7,6 @@ import { makeDOMDriver } from "@cycle/dom";
 import { run } from "@cycle/rxjs-run";
 import Rx from "rxjs/Rx";
 import { getRhsmConf, setRhsmConf } from "../../src/lib/status";
-//import { describe, it, expect } from "../jasmine/jasmine";
 
 function testFactory(Component) {
     return (sources) => {
@@ -19,7 +18,9 @@ function testFactory(Component) {
     }
 }
 
-describe("Generic labeled input", function() {    
+// TODO: Make a beforeAll function that will replace the good rhsm.conf with a known file for testing
+
+describe("Generic labeled input: ", function() {    
     it("Verifies the component is created", function() {
         //let miniTest = testFactory(gen.TextInput)
         //run(miniTest, drivers);
@@ -41,7 +42,7 @@ describe("Generic labeled input", function() {
 })
 
 describe("DBus RHSM Configuration tests: ", function() {
-    it("Gets the server.hostname in the rhsm.conf file", function(done) {
+    it("Gets the server.hostname in the rhsm.conf file", (done) => {
         let getPrm = getRhsmConf("server.hostname");
         let get$ = Rx.Observable.fromPromise(getPrm);
         get$.map(key => key)
@@ -64,3 +65,5 @@ describe("DBus RHSM Configuration tests: ", function() {
           });
     })
 })
+
+// TODO: make an afteraAll function that will set the original rhsm.conf back 
