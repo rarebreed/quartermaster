@@ -7,7 +7,6 @@
  *                                 \==> Listen for Attach
  */
 
-import xs from "xstream";
 import Rx from "rxjs/Rx";
 import { run } from '@cycle/run';
 import { div, input, button, h1, hr, label, makeDOMDriver } from "@cycle/dom";
@@ -19,10 +18,10 @@ const cockpit = require("cockpit");
 const Obs = Rx.Observable;
 
 
-type EntitlementStatus = "registered" | "unknown" | "registering" | "unregistering";
+export type EntitlementStatus = "registered" | "unknown" | "registering" | "unregistering";
 
 
-type ProductDetails = {
+export type ProductDetails = {
     productName: string,
     productId: string,
     version: string,
@@ -33,7 +32,7 @@ type ProductDetails = {
 }
 
 
-function getStatus() {
+export function getStatus() {
     let stat = status.getStatus();
     return Obs.fromPromise(stat);
 }
@@ -61,12 +60,34 @@ function registerModel(action$: Rx.Observable) {
 // ====================================================
 // Entry point to our main app
 // ====================================================
-function main(sources) {
+function main2(sources) {
     let status$ = getStatus();
-    let label$ = TextInput(val => val, sources.DOM)
-    
+
     return {
         DOM: status$.map(s => StatusView(s))
+    }
+}
+
+function main(sources) {
+    let props$ = Rx.Observable.of({name: "Subscription", initial: "none"});
+    let _src  = {DOM: sources.DOM, props$: props$};
+
+    let status$ = getStatus().map(s => StatusView(s));
+    let input$ = TextInput(val => val, _src)
+    let inputDOM = input$.DOM;
+    let inputValue = input$.value;
+
+    let vdom$ = status$.mergeMap(status => {
+        return inputDOM.map(input => 
+            div(".main", [
+                status, 
+                input
+            ])
+        )
+    })
+    
+    return {
+        DOM: vdom$
     }
 }
 

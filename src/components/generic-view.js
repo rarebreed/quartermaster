@@ -14,6 +14,7 @@
 import { div, input, label, button, tr, td, span, makeDOMDriver, DOMSource } from "@cycle/dom";
 import { VNode } from "@cycle/dom";
 import { run } from "@cycle/rxjs-run";
+import type { LabelInputProps, LabelInputSources, Component } from "quartermaster"; 
 //import xs, { Stream, MemoryStream } from "xstream";
 //import { run } from "@cycle/run";
 import Rx from "rxjs/Rx";
@@ -21,33 +22,20 @@ import Rx from "rxjs/Rx";
 //const _ = cockpit.gettext;
 const _ = v => v;
 
-type LabelInputProps = {
-    name: string, 
-    initial: string
-}
 
-type SliderInputProps = {
-    label: LabelInputProps,
-    min: number,
-    max: number,
-    unit: string
-}
-
-type LabelInputSources = {
-    DOM: DOMSource,
-    props$: Rx.Observable<LabelInputProps>
-}
-
-function textInputIntent(domSrc) {
+function textInputIntent(domSrc): Rx.Observable<string> {
     return domSrc.select(".input")
       .events("input")
       .map(evt => evt.target.value);
 }
 
 
-function inputState(fn: (v: string) => any,inpEvts: any) {
+function inputState<T>( fn: (v: T) => any
+                      , inpEvts: any
+                      , start: T)
+                      : Rx.Observable<T> {
     return inpEvts.map(fn)
-      .startWith("");
+      .startWith(start);
 }
 
 /**
@@ -80,13 +68,16 @@ function textInputView( props$: Rx.Observable<LabelInputProps>
  * @param {*} hdlr 
  * @param {*} sources 
  */
-export function TextInput(hdlr: (v: string) => any, sources: LabelInputSources) {
+export function TextInput( hdlr: (v: string) => any
+                         , sources: LabelInputSources)
+                         : Component<string> {
     const intent$ = textInputIntent(sources.DOM);
-    const model$ = inputState(hdlr, intent$);
+    const model$ = inputState(hdlr, intent$, "");
     const view$ = textInputView(sources.props$, model$);
 
     return {
-        DOM: view$
+        DOM: view$,
+        value: model$.map(v => v)
     }
 }
 
