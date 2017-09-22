@@ -35,8 +35,18 @@ export const RHSMObjs = RHSMInterfaces.reduce((acc, n) => {
 export const suser = {superuser: "require"};
 
 
-function getDbusIface(iface: string, obj: string, opts = {superuser: "require"}) {
-    let svc = cockpit.dbus(RHSMSvc, opts);
+/**
+ * Helper function to get the dbus service and a proxy
+ * 
+ * TODO: Figure out the type of opts
+ * 
+ * @param {*} iface 
+ * @param {*} obj 
+ * @param {*} sName
+ * @param {*} opts 
+ */
+function getDbusIface(iface: string, obj: string, sName: string = RHSMSvc, opts={superuser: "require"}) {
+    let svc = cockpit.dbus(sName, opts);
     let cfgPxy = svc.proxy(iface, obj);
     return {
         service: svc,
@@ -64,9 +74,11 @@ export function getRhsmConf(property: string) {
 /**
  * Sets a value in rhsm.conf
  * 
- * @param {*} property 
- * @param {*} value 
- * @param {*} vtype 
+ * TODO: make a regex to validate vtype
+ * 
+ * @param {*} property The (section.)key to set (eg server.hostname)
+ * @param {*} value What to se the value to
+ * @param {*} vtype The dbus sig type of the value (eg "s" or "i")
  */
 export function setRhsmConf(property: string, value: any, vtype: string) {
     let { service, proxy } = getDbusIface(RHSMIfcs.Config, RHSMObjs.Config);
@@ -105,18 +117,19 @@ export const EntitlementStatus = _statuses.reduce((acc, n) => {
 
 
 function statusListener(evt: any, name: any, args: any) {
-    console.log(evt);
-    console.log(name);
-    console.log(args);
+    console.log(`Event was: ${evt}`);
+    console.log(`Name was ${name}`);
+    console.log(`Args were: ${args}`);
 }
 
 
 /**
- * 
+ * Uses the EntitlementStatus DBus interface method check_status to get current status
  */
 export function getStatus(): Promise<string> {
-    let svc = cockpit.dbus(SubManSvc, suser);
-    let proxy = svc.proxy(SubManIfcs.EntitlementStatus, SubManObjs.EntitlementStatus);
+    //let svc = cockpit.dbus(SubManSvc, suser);
+    //let proxy = svc.proxy(SubManIfcs.EntitlementStatus, SubManObjs.EntitlementStatus);
+    let { service, proxy } = getDbusIface(SubManIfcs.EntitlementStatus, SubmanObjs.EntitlementStatus, SubManSvc);
     let pproxy = proxy.wait();
     return pproxy
       .then(() => {
@@ -130,10 +143,11 @@ export function getStatus(): Promise<string> {
           let mapped = EntitlementStatus.get(r[0]);
           return mapped;
       })
+      .catch(err => console.log(err))
 }
 
 /**
- * A stream wrapped around the dbus signal listener
+ * A stream wrapped around the dbus signal listener to be notifed when the status changes
  */
 export function updateStatus() {
 

@@ -2,6 +2,5 @@
 *.retry
 node_modules/
 build/
-jasmine/
 test/spec/test.js*
 test/jasmine

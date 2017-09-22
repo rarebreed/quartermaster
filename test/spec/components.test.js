@@ -18,10 +18,15 @@ function testFactory(Component) {
     }
 }
 
-// TODO: Make a beforeAll function that will replace the good rhsm.conf with a known file for testing
+/**
+ * replaces the good rhsm.conf with a known file for testing
+ */
+function beforeAll() {
+    // I think I need to use cockpit.spawn() and run a cp and mv command. 
+}
 
 describe("Generic labeled input: ", function() {    
-    it("Verifies the component is created", function() {
+    it("Verifies the component is created", function(done) {
         //let miniTest = testFactory(gen.TextInput)
         //run(miniTest, drivers);
         function main(sources) {
@@ -38,6 +43,8 @@ describe("Generic labeled input: ", function() {
         }
 
         run(main, drivers);
+
+        // TODO:  I think I need to do a document.querySelect here and expect the component to exist
     })
 })
 
@@ -53,12 +60,12 @@ describe("DBus RHSM Configuration tests: ", function() {
     })
 
     it("Sets the server.hostname in rhsm.conf to foo.bar", (done) => {
-        let newVal = "subscription.rhsm.redhat.com";
+        let newVal = "foo.bar";
         let setPrm = setRhsmConf("server.hostname", newVal, "s");
         let getPrm = getRhsmConf("server.hostname");
         let set$ = Rx.Observable.fromPromise(setPrm);
         let get$ = Rx.Observable.fromPromise(getPrm);
-        set$.mergeMap(s => get$.map(k => k))
+        set$.mergeMap(() => get$.map(k => k))
           .subscribe(res => {
               expect(res.v).toBe(newVal);
               done();
@@ -67,3 +74,6 @@ describe("DBus RHSM Configuration tests: ", function() {
 })
 
 // TODO: make an afteraAll function that will set the original rhsm.conf back 
+function afterAll() {
+
+}
