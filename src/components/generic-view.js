@@ -18,12 +18,10 @@ import type { LabelInputProps, LabelInputSources, Component } from "quartermaste
 //import xs, { Stream, MemoryStream } from "xstream";
 //import { run } from "@cycle/run";
 import Rx from "rxjs/Rx";
-//const cockpit = require("cockpit");
-//const _ = cockpit.gettext;
-const _ = v => v;
+const cockpit = require("cockpit");
+const _: (s: string) => string = cockpit.gettext;
 
-
-function textInputIntent(domSrc): Rx.Observable<string> {
+function textInputIntent(domSrc: DOMSource ): Rx.Observable<string> {
     return domSrc.select(".input")
       .events("input")
       .map(evt => evt.target.value);
@@ -31,7 +29,7 @@ function textInputIntent(domSrc): Rx.Observable<string> {
 
 
 function inputState<T>( fn: (v: T) => any
-                      , inpEvts: any
+                      , inpEvts: Rx.Observable<T>
                       , start: T)
                       : Rx.Observable<T> {
     return inpEvts.map(fn)

@@ -9,7 +9,7 @@
 
 import Rx from "rxjs/Rx";
 import { run } from '@cycle/run';
-import { div, input, button, h1, hr, label, makeDOMDriver } from "@cycle/dom";
+import { div, input, button, h1, hr, label, makeDOMDriver, DOMSource } from "@cycle/dom";
 import {html} from 'snabbdom-jsx';
 import { StatusView } from "../components/status-view.jsx";
 import { TextInput } from "../components/generic-view";
@@ -37,15 +37,6 @@ export function getStatus() {
     return Obs.fromPromise(stat);
 }
 
-/**
- * Listens for action on the (Un)Register button
- * @param {*} domSource 
- */
-function registrationIntent(domSource) {
-    return domSource.select("#registration-btn")
-      .events("click")
-      .filter(evt => evt.button !== 2);
-}
 
 /**
  * Maintains the registration state in this stream
@@ -60,7 +51,7 @@ function registerModel(action$: Rx.Observable) {
 // ====================================================
 // Entry point to our main app
 // ====================================================
-function main2(sources) {
+function main2(sources: DOMSource) {
     let status$ = getStatus();
 
     return {
@@ -68,7 +59,7 @@ function main2(sources) {
     }
 }
 
-function main(sources) {
+function main(sources: DOMSource) {
     let props$ = Rx.Observable.of({name: "Subscription", initial: "none"});
     let _src  = {DOM: sources.DOM, props$: props$};
 
@@ -77,6 +68,7 @@ function main(sources) {
     let inputDOM = input$.DOM;
     let inputValue = input$.value;
 
+    // Merge the Status view with the TextInput view
     let vdom$ = status$.mergeMap(status => {
         return inputDOM.map(input => 
             div(".main", [

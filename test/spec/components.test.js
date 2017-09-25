@@ -43,7 +43,7 @@ describe("Generic labeled input: ", function() {
         }
 
         run(main, drivers);
-
+        done();
         // TODO:  I think I need to do a document.querySelect here and expect the component to exist
     })
 })

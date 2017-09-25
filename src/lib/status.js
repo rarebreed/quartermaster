@@ -129,7 +129,7 @@ function statusListener(evt: any, name: any, args: any) {
 export function getStatus(): Promise<string> {
     //let svc = cockpit.dbus(SubManSvc, suser);
     //let proxy = svc.proxy(SubManIfcs.EntitlementStatus, SubManObjs.EntitlementStatus);
-    let { service, proxy } = getDbusIface(SubManIfcs.EntitlementStatus, SubmanObjs.EntitlementStatus, SubManSvc);
+    let { service, proxy } = getDbusIface(SubManIfcs.EntitlementStatus, SubManObjs.EntitlementStatus, SubManSvc);
     let pproxy = proxy.wait();
     return pproxy
       .then(() => {
