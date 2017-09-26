@@ -3,8 +3,8 @@
  * such, it could be considered part of the Model layer. 
  */
 const cockpit = require("cockpit");
-const immutable = require("immutable");
-const Map = immutable.Map;
+const { Map } = require("immutable");
+
 
 // The com.redhat.SubscriptionManager Interfaces and Objects
 const SubManPaths = ["com", "redhat", "SubscriptionManager"];
@@ -109,8 +109,9 @@ const _statuses: Array<StatusMap> = [
     [5, "RHSM_REGISTRATION_REQUIRED"]
 ]
 export const EntitlementStatus = _statuses.reduce((acc, n) => {
+    let [key, val] = n;
     if (acc)
-        return acc.set(n[0], n[1]);
+        return acc.set(key, val);
     else
         console.error(`Somehow acc was null or undefined.  Skipping ${n[1]}`)
 }, _EntitlementStatus)

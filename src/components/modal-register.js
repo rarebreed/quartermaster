@@ -49,18 +49,16 @@ function registerView(sources) {
     function makeTISrc(prop: Rx.Observable<LabelInputProps>): LabelInputSources {
         return { DOM: sources.DOM, props$: prop }
     }
-    const textInputs = {
-        login: TextInput(id, makeTISrc(loginProps$)),
-        pw: TextInput(id, makeTISrc(pwProps$)),
-        keys: TextInput(id, makeTISrc(akProps$)),
-        org: TextInput(id, makeTISrc(orgProps$))
-    }
+
+    const textInputs: Array<Component<string>> = [
+        TextInput(id, makeTISrc(loginProps$)),
+        TextInput(id, makeTISrc(pwProps$)),
+        TextInput(id, makeTISrc(akProps$)),
+        TextInput(id, makeTISrc(orgProps$))
+    ];
 
     let view = div(".modal-register", [
-        textInputs.login.DOM,
-        textInputs.pw.DOM,
-        textInputs.keys.DOM,
-        textInputs.org.DOM,
-        button("#registration-btn", )
+        ...textInputs,
+        button("#registration-btn")
     ])
 }
