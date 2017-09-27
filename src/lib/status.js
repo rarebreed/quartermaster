@@ -1,9 +1,10 @@
 /** @flow
- * This module is primarily concerned with getting information from DBus, and supplying it to the Model layer.  As 
- * such, it could be considered part of the Model layer. 
+ * This module is primarily concerned with getting information from DBus, and supplying it to the Model layer.  As
+ * such, it could be considered part of the Model layer.
  */
 const cockpit = require("cockpit");
-const { Map } = require("immutable");
+//const { Map } = require("immutable");
+import Rx from "rxjs/Rx";
 
 
 // The com.redhat.SubscriptionManager Interfaces and Objects
@@ -37,13 +38,13 @@ export const suser = {superuser: "require"};
 
 /**
  * Helper function to get the dbus service and a proxy
- * 
+ *
  * TODO: Figure out the type of opts
- * 
- * @param {*} iface 
- * @param {*} obj 
+ *
+ * @param {*} iface
+ * @param {*} obj
  * @param {*} sName
- * @param {*} opts 
+ * @param {*} opts
  */
 function getDbusIface(iface: string, obj: string, sName: string = RHSMSvc, opts={superuser: "require"}) {
     let svc = cockpit.dbus(sName, opts);
@@ -57,13 +58,13 @@ function getDbusIface(iface: string, obj: string, sName: string = RHSMSvc, opts=
 
 /**
  * Uses the Configuration DBus interface to get a section:key from the rhsm.conf file
- * 
- * @param {*} property 
+ *
+ * @param {*} property
  */
-export function getRhsmConf(property: string) {
+export function getRhsmConf(property: string): Promise<{t: string, v: string}> {
     let { service, proxy } = getDbusIface(RHSMIfcs.Config, RHSMObjs.Config);
     let waitPrm = proxy.wait();
-    return waitPrm.then(() => 
+    return waitPrm.then(() =>
         proxy.Get(property)
           .then(p => p)
           .catch(e => console.log(e))
@@ -73,14 +74,16 @@ export function getRhsmConf(property: string) {
 
 /**
  * Sets a value in rhsm.conf
- * 
+ *
  * TODO: make a regex to validate vtype
- * 
+ *
  * @param {*} property The (section.)key to set (eg server.hostname)
  * @param {*} value What to se the value to
  * @param {*} vtype The dbus sig type of the value (eg "s" or "i")
  */
-export function setRhsmConf(property: string, value: any, vtype: string) {
+export function setRhsmConf( property: string
+                           , value: any
+                           , vtype: string) {
     let { service, proxy } = getDbusIface(RHSMIfcs.Config, RHSMObjs.Config);
     return proxy.wait(() => {
         let setPromise = proxy.Set(property, {t: vtype, v: value});
@@ -97,30 +100,82 @@ export function setRhsmConf(property: string, value: any, vtype: string) {
 
 
 // These are the possible return values from check_status (taken from cert_sorter.py)
-type StatusMap = [number, string];
-let _EntitlementStatus: Map<number, string> = new Map();
-const _statuses: Array<StatusMap> = [
-    [-1, "UNKNOWN"],
-    [0, "RHSM_VALID"],
-    [1, "RHSM_EXPIRED"],
-    [2, "RHSM_WARNING"],
-    [3, "RHN_CLASSIC"],
-    [4, "RHSM_PARTIALLY_VALID"],
-    [5, "RHSM_REGISTRATION_REQUIRED"]
-]
-export const EntitlementStatus = _statuses.reduce((acc, n) => {
-    let [key, val] = n;
-    if (acc)
-        return acc.set(key, val);
-    else
-        console.error(`Somehow acc was null or undefined.  Skipping ${n[1]}`)
-}, _EntitlementStatus)
+type StatusTypes = "UNKNOWN" 
+                 | "RHSM_VALID" 
+                 | "RHSM_EXPIRED"
+                 | "RHSM_WARNING" 
+                 | "RHN_CLASSIC" 
+                 | "RHSM_PARTIALLY_VALID" 
+                 | "RHSM_REGISTRATION_REQUIRED";
+type StatusMap = [number, StatusTypes];
+const _statuses: Array<StatusMap> = [ [-1, "UNKNOWN"]
+                                    , [0, "RHSM_VALID"]
+                                    , [1, "RHSM_EXPIRED"]
+                                    , [2, "RHSM_WARNING"]
+                                    , [3, "RHN_CLASSIC"]
+                                    , [4, "RHSM_PARTIALLY_VALID"]
+                                    , [5, "RHSM_REGISTRATION_REQUIRED"]
+                                    ]
+const EntitlementStatus: Map<number, StatusTypes> = new Map(_statuses);
 
 
 function statusListener(evt: any, name: any, args: any) {
     console.log(`Event was: ${evt}`);
     console.log(`Name was ${name}`);
     console.log(`Args were: ${args}`);
+}
+
+type EntStatusSignal = {
+    evt: any, 
+    name: any,
+    args: any
+}
+
+/**
+ * Creates an object that contains a handler function that can be passed to addEventListener for signals and a Subject
+ * 
+ * This function will create a handler that can be passed to a proxy.addEventListener method.  It uses a Subject so 
+ * that the listener function will pass the args to the subject.next method.  This allows us to create an Observable
+ * stream so that whenever the proxy's event is fired, it will be passed to the listener, and the listener will pass it 
+ * to the Subject
+ */
+function makeEventState<T>(start: T) {
+    let subject = new Rx.BehaviorSubject(start);
+    subject.subscribe({
+        next: (v: T) => {
+            console.log(v);
+            return v;
+        }
+    })
+
+    const listener = (evt: any, name: any, args: any) => subject.next({evt: evt, name: name, args: args});
+    return {
+        evtState$: subject,
+        listener: listener
+    }
+}
+
+/**
+ * Gets the initial status
+ */
+function status(): Rx.Observable<string> {
+    let { service, proxy } = getDbusIface(SubManIfcs.EntitlementStatus, SubManObjs.EntitlementStatus, SubManSvc);
+    let { evtState$, listener } = makeEventState({evt: "", name: "", args: ""});
+
+    let pproxy: Promise<{t: string, v: string}> = proxy.wait()
+      .then(() => {
+          proxy.addEventListener("signal", listener)
+      })
+      .then(() => proxy.call("check_status", []))
+      .then((r: {t: string, v: string}) => {
+          if (r == undefined)
+            return "UNKNOWN";
+          else
+            return EntitlementStatus.get(r[0])
+      })
+      .catch(err => console.error(err));
+    let start$ = Rx.Observable.fromPromise(pproxy);
+    start$.mergeMap(s => evtState$.startWith(s.v));
 }
 
 

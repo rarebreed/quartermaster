@@ -5,3 +5,5 @@
 export function id<T>(v: T): T {
     return v;
 }
+
+export const _ = id;
