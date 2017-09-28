@@ -3,57 +3,8 @@
  * such, it could be considered part of the Model layer.
  */
 const cockpit = require("cockpit");
-//const { Map } = require("immutable");
 import Rx from "rxjs/Rx";
-
-
-// The com.redhat.SubscriptionManager Interfaces and Objects
-const SubManPaths = ["com", "redhat", "SubscriptionManager"];
-export const SubManSvc = SubManPaths.join(".");
-const SubManInterfaces = ["EntitlementStatus"];
-export const SubManIfcs = SubManInterfaces.reduce((acc, n) => {
-    acc[n] = `${SubManSvc}.${n}`;
-    return acc;
-}, {});
-export const SubManObjs = SubManInterfaces.reduce((acc, n) => {
-    acc[n] = "/".concat(n);
-    return acc;
-}, {});
-
-// The com.redhat.RHSM1 Interfaces and Objects
-const RHSMPaths = ["com", "redhat", "RHSM1"];
-export const RHSMSvc = RHSMPaths.join(".");
-const RHSMInterfaces = ["Config", "RegisterServer"];
-export const RHSMIfcs = RHSMInterfaces.reduce((acc, n) => {
-    acc[n] = `${RHSMSvc}.${n}`;
-    return acc;
-}, {});
-export const RHSMObjs = RHSMInterfaces.reduce((acc, n) => {
-    acc[n] = "/".concat(RHSMPaths.join("/").concat(`/${n}`));
-    return acc;
-}, {});
-
-export const suser = {superuser: "require"};
-
-
-/**
- * Helper function to get the dbus service and a proxy
- *
- * TODO: Figure out the type of opts
- *
- * @param {*} iface
- * @param {*} obj
- * @param {*} sName
- * @param {*} opts
- */
-function getDbusIface(iface: string, obj: string, sName: string = RHSMSvc, opts={superuser: "require"}) {
-    let svc = cockpit.dbus(sName, opts);
-    let cfgPxy = svc.proxy(iface, obj);
-    return {
-        service: svc,
-        proxy: cfgPxy
-    }
-}
+import {getDbusIface, RHSMIfcs, RHSMObjs, SubManIfcs, SubManObjs, SubManSvc} from "./rhsm.dbus.js";
 
 
 /**
@@ -83,18 +34,23 @@ export function getRhsmConf(property: string): Promise<{t: string, v: string}> {
  */
 export function setRhsmConf( property: string
                            , value: any
-                           , vtype: string) {
+                           , vtype: string)
+                           : Promise<{t: string, v: any}> {
     let { service, proxy } = getDbusIface(RHSMIfcs.Config, RHSMObjs.Config);
-    return proxy.wait(() => {
-        let setPromise = proxy.Set(property, {t: vtype, v: value});
-        setPromise.done(() => {
-            let getPromise = proxy.Get(property);
-            getPromise.done(r => {
-                console.log(r)
+    let prmPxy = proxy.wait()
+    return prmPxy.then(() => {
+        return proxy.Set(property, {t: vtype, v: value})
+          .then(() => {
+            return proxy.Get(property)
+              .then(r => {
+                console.log(`In Get of Set: ${r.v}`)
                 if (r.v !== value)
                     console.error(`Did not set the value of ${property} to ${value}`)
-            }).fail(e => console.error(e));
-        }).fail(e => console.error(e))
+                return r;
+              })
+              .catch(e => console.error(e));
+          })
+          .catch(e => console.error(e))
     });
 }
 
@@ -148,7 +104,10 @@ function makeEventState<T>(start: T) {
         }
     })
 
-    const listener = (evt: any, name: any, args: any) => subject.next({evt: evt, name: name, args: args});
+    function listener(evt: any, name: any, args: any) {
+        subject.next({evt: evt, name: name, args: args});
+    }
+
     return {
         evtState$: subject,
         listener: listener
@@ -202,9 +161,7 @@ export function getStatus(): Promise<string> {
       .catch(err => console.log(err))
 }
 
-/**
- * A stream wrapped around the dbus signal listener to be notifed when the status changes
- */
-export function updateStatus() {
 
+function register() {
+    let { service, proxy } = getDbusIface(SubManIfcs.EntitlementStatus, SubManObjs.EntitlementStatus, SubManSvc);
 }
