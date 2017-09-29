@@ -54,7 +54,10 @@ function startRegister() {
         .then(() => {
             return proxy.Start()
         })
-        .then(result => result)
+        .then(result => {
+            console.log(result)
+            return result
+        })
         .catch(console.error);
     return Rx.Observable.fromPromise(pxyPrm).map(s => registerPath(s));
 }
@@ -83,6 +86,7 @@ function register( start$: Rx.Observable<string>
 
     return regArgs$.mergeMap(regArgs => {
         return start$.mergeMap(bus => {
+            console.log(`The socket address is ${bus}`);
             let opts = {superuser: "require", bus: "none", address: bus}
             let { service, proxy } = getDbusIface(RHSMIfcs.Register, RHSMObjs.Register, null, opts);
             // org, username, pw, RegisterOptions dict, RegisterConnectionOptions dict
@@ -94,13 +98,17 @@ function register( start$: Rx.Observable<string>
             
             // These are the args we actually pass
             let args = [regArgs.org, regArgs.user, regArgs.password, regOpts, regConnOpts];
-            let prmPxy = proxy.wait();
-            prmPxy.then(() => proxy.call("Register", args, {type: typeSig}))
+            let prmPxy = proxy.wait()
+                .then(() => proxy.call("Register", args, {type: typeSig}))
                 .then(res => { 
                     console.log(res);
                     return res;
                 })
-                .catch(console.error);
+                .catch(err => {
+                    console.error("Could not register")
+                    console.error(err)
+                    return "Could not register"
+                });
 
             return Rx.Observable.fromPromise(prmPxy);
         })

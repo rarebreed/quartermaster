@@ -1,15 +1,29 @@
 /**@flow
- * Contains unit tests for generic components
+ * Contains integration tests for:
+ * - RHSM dbus services using the cockpit.dbus library
+ * - Generic VDOM component tests
+ * 
+ * TODO: 
+ * - Move all lambda functions inside it() to separate named functions
+ * - Create a configuration system for the tests to define certain variables
+ * - Create mocked versions of tests for unit testing or pseudo-integration testing
+ * 
+ * All of the lambda functions inside the it() functions need to become standalone named functions defined in
+ * a separate library.  This is because we need to create a metadata decorator to create and upload Polarion testcases
+ * 
+ * There also needs to be a configuration system to read in variables for certain things.  For example passwords, or
+ * settings to invoke in rhsm.conf, etc.
  */
 
 import * as gen from "../../src/components/generic-view";
 import { makeDOMDriver } from "@cycle/dom";
 import { run } from "@cycle/rxjs-run";
 import Rx from "rxjs/Rx";
-import { getRhsmConf, setRhsmConf } from "../../src/lib/status";
+import { getRhsmConf, setRhsmConf, status } from "../../src/lib/status";
 import { launch } from "../../src/lib/spawn";
 import type { SpawnResult } from "../../src/lib/spawn";
 import { startRegister, register } from "../../src/lib/registration";
+//import { describe, it, beforeEach, afterEach, expect } from "jasmine";
 
 function testFactory(Component) {
     return (sources) => {
@@ -83,6 +97,7 @@ describe("Cockpit and RHSM Integration tests: ", function() {
         beforeEach(runCmd(["cp", "/etc/rhsm/rhsm.conf", "/etc/rhsm/rhsm.conf.orig"]))
 
         it("Gets the server.prefix in the rhsm.conf file", (done) => {
+            console.debug("Running test to get server.prefix from rhsm.conf");
             let getPrm = getRhsmConf("server.prefix");
             let get$ = Rx.Observable.fromPromise(getPrm);
             get$.map(key => key)
@@ -94,6 +109,7 @@ describe("Cockpit and RHSM Integration tests: ", function() {
         })
 
         it("Sets the server.hostname in rhsm.conf to foo.bar", (done) => {
+            console.debug("Running test to st server.hostname from rhsm.conf");
             let newVal = "foo.bar";
             let setPrm = setRhsmConf("server.hostname", newVal, "s");
             let set$ = Rx.Observable.fromPromise(setPrm);
@@ -114,12 +130,28 @@ describe("Cockpit and RHSM Integration tests: ", function() {
         afterEach(runCmd(["mv", "/etc/rhsm/rhsm.conf.orig", "/etc/rhsm/rhsm.conf"]))
     })
 
-    describe("RHSM Registration tests using cockpit", () => {
+    describe("RHSM Entitlement status tests using cockpit => ", () => {
+
+        it("Gets starting status of system", (done) => {
+            let status$ = status();
+            status$.subscribe({
+                next: (stat) => {
+                    console.log(stat)
+                    expect(stat).toBeTruthy()
+                    done()
+                }
+            })
+        })
+    })
+
+    describe("RHSM Registration tests using cockpit => ", () => {
         it("Registers with the dbus Register method", (done) => {
             let args$ = Rx.Observable.of({
                 user: "stoner-cockpit",
                 password: "quartermaster",
-                org: "11348696"
+                org: "11348696",
+                host: "subscription.rhsm.stage.redhat.com",
+                port: "443"
             })
             let service$ = startRegister()
             register(service$, args$).subscribe({
@@ -132,7 +164,7 @@ describe("Cockpit and RHSM Integration tests: ", function() {
                     done()
                 }
             })
-        })
+        }, 300000)
     })
 })
 

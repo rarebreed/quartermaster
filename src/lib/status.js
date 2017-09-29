@@ -99,12 +99,14 @@ function makeEventState<T>(start: T) {
     let subject = new Rx.BehaviorSubject(start);
     subject.subscribe({
         next: (v: T) => {
+            console.log("In subscribe of makeEventState")
             console.log(v);
             return v;
         }
     })
 
     function listener(evt: any, name: any, args: any) {
+        console.log("listener was called")
         subject.next({evt: evt, name: name, args: args});
     }
 
@@ -117,24 +119,38 @@ function makeEventState<T>(start: T) {
 /**
  * Gets the initial status
  */
+export
 function status(): Rx.Observable<string> {
     let { service, proxy } = getDbusIface(SubManIfcs.EntitlementStatus, SubManObjs.EntitlementStatus, SubManSvc);
     let { evtState$, listener } = makeEventState({evt: "", name: "", args: ""});
 
-    let pproxy: Promise<{t: string, v: string}> = proxy.wait()
-      .then(() => {
-          proxy.addEventListener("signal", listener)
-      })
-      .then(() => proxy.call("check_status", []))
-      .then((r: {t: string, v: string}) => {
-          if (r == undefined)
-            return "UNKNOWN";
-          else
-            return EntitlementStatus.get(r[0])
-      })
-      .catch(err => console.error(err));
-    let start$ = Rx.Observable.fromPromise(pproxy);
-    start$.mergeMap(s => evtState$.startWith(s.v));
+    // First, add an event listener with the handler we created from makeEventState, then make the call to check_status
+    let prmProxy = proxy.wait()
+        .then(() => {
+            proxy.addEventListener("signal", listener)
+        })
+        .then(() => proxy.call("check_status", []))
+        .then((r) => {
+            console.debug(`After call to check_status: ${r[0]}`)
+            if (r == undefined)
+                return "UNKNOWN";
+            else
+                return EntitlementStatus.get(r[0])
+        })
+        .catch(err => {
+            console.error("Could not get check_status")
+            console.error(err)
+        });
+    
+    // Wrap the promise in a stream, so that we can use it with other streams
+    let start$ = Rx.Observable.fromPromise(prmProxy);
+    return start$.concatMap(s => {
+        return evtState$
+            .map(v => {
+                v.args = s
+                return v
+            })
+    });
 }
 
 
@@ -159,9 +175,4 @@ export function getStatus(): Promise<string> {
           return mapped;
       })
       .catch(err => console.log(err))
-}
-
-
-function register() {
-    let { service, proxy } = getDbusIface(SubManIfcs.EntitlementStatus, SubManObjs.EntitlementStatus, SubManSvc);
 }
