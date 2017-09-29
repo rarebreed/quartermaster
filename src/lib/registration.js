@@ -47,14 +47,15 @@ const registerPath = (path: string) => {
 /**
  * This is the first part of the register process as it will create the unix socket to talk to the Register interface
  */
+export
 function startRegister() {
     let { service, proxy } = getDbusIface(RHSMIfcs.RegisterServer, RHSMObjs.RegisterServer);
     let pxyPrm: Promise<string> = proxy.wait()
-      .then(() => {
-          return proxy.Start()
-      })
-      .then(result => result)
-      .catch(console.error);
+        .then(() => {
+            return proxy.Start()
+        })
+        .then(result => result)
+        .catch(console.error);
     return Rx.Observable.fromPromise(pxyPrm).map(s => registerPath(s));
 }
 
@@ -68,6 +69,7 @@ function startRegister() {
  * @param {*} start$ 
  * @param {*} regArgs$ 
  */
+export
 function register( start$: Rx.Observable<string>
                  , regArgs$: Rx.Observable<RegisterAllOptions>)
                  : Rx.Observable<string> {
@@ -92,13 +94,13 @@ function register( start$: Rx.Observable<string>
             
             // These are the args we actually pass
             let args = [regArgs.org, regArgs.user, regArgs.password, regOpts, regConnOpts];
-            let prmPxy: Promise<string> = proxy.wait()
-              .then(() => proxy.Register(args, {type: typeSig}))
-              .then(res => {
-                  console.log(res);
-                  return res;
-              })
-              .catch(console.error);
+            let prmPxy = proxy.wait();
+            prmPxy.then(() => proxy.call("Register", args, {type: typeSig}))
+                .then(res => { 
+                    console.log(res);
+                    return res;
+                })
+                .catch(console.error);
 
             return Rx.Observable.fromPromise(prmPxy);
         })

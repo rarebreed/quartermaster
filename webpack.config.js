@@ -7,7 +7,7 @@ const Clean = require("clean-webpack-plugin");
 const TESTING = process.env.NODE_ENV === "testing";
 const contentBase = "." //TESTING ? "./test" : "./build";
 const outpath = TESTING ? "test" : "build";
-const componentsTest = "./test/spec/components.test.js";
+const componentsTest = "./test/spec/rhsm.test.js";
 const genericTest = "./src/components/generic-view.js";
 // Normally we use componentsTest for testing, but for one-offs, can choose genericTest
 const entrypt = TESTING ? componentsTest : "./src/app/index.js";
@@ -16,7 +16,7 @@ const outfile = TESTING ? "spec/test.js" : "app.js";
 // Clean up the build files
 let cleanOptions = {
     root:     path.resolve(__dirname, ""),
-    exclude:  TESTING ? ["components.test.js"] : [],
+    exclude:  TESTING ? ["rhsm.test.js"] : [],
     verbose:  true,
     dry:      false,
     watch:    false
