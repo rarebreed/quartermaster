@@ -16,7 +16,7 @@ const outfile = TESTING ? "spec/test.js" : "app.js";
 // Clean up the build files
 let cleanOptions = {
     root:     path.resolve(__dirname, ""),
-    exclude:  TESTING ? ["rhsm.test.js"] : [],
+    exclude:  TESTING ? ["rhsm.test.js", "helpers.test.js"] : [],
     verbose:  true,
     dry:      false,
     watch:    false

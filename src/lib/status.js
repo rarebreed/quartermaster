@@ -75,12 +75,6 @@ const _statuses: Array<StatusMap> = [ [-1, "UNKNOWN"]
 const EntitlementStatus: Map<number, StatusTypes> = new Map(_statuses);
 
 
-function statusListener(evt: any, name: any, args: any) {
-    console.log(`Event was: ${evt}`);
-    console.log(`Name was ${name}`);
-    console.log(`Args were: ${args}`);
-}
-
 type EntStatusSignal = {
     evt: any, 
     name: any,
@@ -107,6 +101,7 @@ function makeEventState<T>(start: T) {
 
     function listener(evt: any, name: any, args: any) {
         console.log("listener was called")
+        // FIXME: I think we should check for the name of the event, and only return if the name applies to us
         subject.next({evt: evt, name: name, args: args});
     }
 
@@ -117,7 +112,11 @@ function makeEventState<T>(start: T) {
 }
 
 /**
- * Gets the initial status
+ * Returns a stream of the current status according to the EntitlementStatus DBus interface
+ * 
+ * This function will get the current status by making a call to EntitlementStatus.check_status().  This becomes the
+ * first value of the returned stream.  The returned stream is actually a Subject which listens for any of the 
+ * entitlement_status_change signals 
  */
 export
 function status(): Rx.Observable<string> {
@@ -143,14 +142,24 @@ function status(): Rx.Observable<string> {
         });
     
     // Wrap the promise in a stream, so that we can use it with other streams
-    let start$ = Rx.Observable.fromPromise(prmProxy);
-    return start$.concatMap(s => {
+    let statusState$ = Rx.Observable.fromPromise(prmProxy);
+    // This stream will emit an event whenever the entitlement_status_change signal is received, and thus any Observer
+    // watching this stream will be updated with the latest status
+    return statusState$.concatMap(s => {
         return evtState$
             .map(v => {
                 v.args = s
                 return v
             })
     });
+}
+
+function statusListener(evt, name, args) {
+    console.log("====================")
+    console.log(evt)
+    console.log(name)
+    console.log(args)
+    console.log("====================")
 }
 
 

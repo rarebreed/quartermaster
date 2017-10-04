@@ -19,9 +19,8 @@ import Rx from "rxjs/Rx";
 //const cockpit = require("cockpit");
 //const _: (s: string) => string = cockpit.gettext;
 import { _ } from "../lib/lambda";
-const Observable = Rx.Observable;
 
-function textInputIntent(domSrc: DOMSource ): Observable<string> {
+function textInputIntent(domSrc: DOMSource ): Rx.Observable<string> {
     return domSrc.select(".input")
       .events("input")
       .map(evt => evt.target.value);
@@ -29,10 +28,11 @@ function textInputIntent(domSrc: DOMSource ): Observable<string> {
 
 
 function inputState<T>( fn: (v: T) => any
-                      , inpEvts: Observable<T>
+                      , inpEvts: Rx.Observable<T>
                       , start: T)
-                      : Observable<T> {
+                      : Rx.Observable<T> {
     return inpEvts.map(fn)
+      .do(s => console.log(`In input: ${s}`))
       .startWith(start);
 }
 
@@ -44,9 +44,9 @@ function inputState<T>( fn: (v: T) => any
  * @param {*} props$
  * @param {*} state$
  */
-function textInputView( props$: Observable<LabelInputProps>
-                      , state$: Observable<string>)
-                      : Observable<string> {
+function textInputView( props$: Rx.Observable<LabelInputProps>
+                      , state$: Rx.Observable<string>)
+                      : Rx.Observable<string> {
     return props$.mergeMap(p => {
         return state$.map(s =>
             div(".labeled-input",[
@@ -66,16 +66,14 @@ function textInputView( props$: Observable<LabelInputProps>
  * @param {*} hdlr
  * @param {*} sources
  */
-export function TextInput( hdlr: (v: string) => any
-                         , sources: LabelInputSources)
-                         : Component<string> {
+export function TextInput(sources: LabelInputSources): Component<string> {
     const intent$ = textInputIntent(sources.DOM);
-    const model$ = inputState(hdlr, intent$, "");
+    const model$ = inputState(v => v, intent$, "");
     const view$ = textInputView(sources.props$, model$);
 
     return {
         DOM: view$,
-        value: model$.map(v => v)
+        value: model$
     }
 }
 

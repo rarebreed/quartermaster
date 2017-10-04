@@ -5,14 +5,14 @@ const cockpit = require("cockpit");
 import Rx from "rxjs/Rx";
 import {getDbusIface, RHSMIfcs, RHSMObjs, suser} from "./rhsm.dbus.js";
 
-type RegisterArgs = {
+export type RegisterArgs = {
     user: string,
     password: string,
     org: string | number,
     keys?: Array<string> 
 }
 
-type RegisterOptions = {
+export type RegisterOptions = {
     force?: boolean,
     name?: string,
     consumerid?: string,
@@ -20,7 +20,7 @@ type RegisterOptions = {
 }
 
 // These will override what's in rhsm.conf
-type RegisterConnectionOptions = {
+export type RegisterConnectionOptions = {
     host?: string,        // the subscription management server host
     port?: number,        // the subscription management server port
     handler?: string,     // the context of the subscription management server. E.g. /subscriptions
@@ -33,7 +33,7 @@ type RegisterConnectionOptions = {
 
 // These are all the options that could be passed.  Note that all these options must be available to be
 // entered from the cockpit plugin
-type RegisterAllOptions = RegisterArgs & RegisterOptions & RegisterConnectionOptions
+export type RegisterAllOptions = RegisterArgs & RegisterOptions & RegisterConnectionOptions
 
 const registerPath = (path: string) => {
     let [socket, ...rest] = path.split(",");
@@ -105,9 +105,9 @@ function register( start$: Rx.Observable<string>
                     return res;
                 })
                 .catch(err => {
-                    console.error("Could not register")
+                    console.error("Failure running Register() method")
                     console.error(err)
-                    return "Could not register"
+                    return ""
                 });
 
             return Rx.Observable.fromPromise(prmPxy);

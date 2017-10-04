@@ -15,15 +15,21 @@
  * settings to invoke in rhsm.conf, etc.
  */
 
-import * as gen from "../../src/components/generic-view";
-import { makeDOMDriver } from "@cycle/dom";
-import { run } from "@cycle/rxjs-run";
-import Rx from "rxjs/Rx";
-import { getRhsmConf, setRhsmConf, status } from "../../src/lib/status";
-import { launch } from "../../src/lib/spawn";
-import type { SpawnResult } from "../../src/lib/spawn";
-import { startRegister, register } from "../../src/lib/registration";
-//import { describe, it, beforeEach, afterEach, expect } from "jasmine";
+import * as gen from "../../src/components/generic-view"
+import { TextInput } from "../../src/components/generic-view"
+import { makeDOMDriver } from "@cycle/dom"
+import { run } from "@cycle/rxjs-run"
+import isolate from "@cycle/isolate"
+import Rx from "rxjs/Rx"
+import { getRhsmConf, setRhsmConf, status } from "../../src/lib/status"
+import { launch } from "../../src/lib/spawn"
+import type { SpawnResult } from "../../src/lib/spawn"
+import { startRegister, register } from "../../src/lib/registration"
+import { ModalRegister } from "../../src/components/modal-register"
+import { curry } from "../../src/lib/lambda"
+import { setInput, runCmd } from "../lib/test-helpers"
+
+const domdriver = makeDOMDriver("#test")
 
 function testFactory(Component) {
     return (sources) => {
@@ -35,59 +41,85 @@ function testFactory(Component) {
     }
 }
 
-const runCmd = cmd => done => {
-    console.log(`Running ${cmd.join(" ")}`)
-    let { result$, output$ } = launch(cmd)
-    output$.subscribe(console.log)
-    result$.subscribe({
-        next: (res: SpawnResult) => {
-            console.log(res)
-            done()
-        },
-        error: (err: SpawnResult) => console.error(err),
-        complete: () => console.log("Process completed")
-    })
-}
-
-describe("Generic labeled input: ", function() {    
-    it("Verifies the component is created", function(done) {
-        //let miniTest = testFactory(gen.TextInput)
-        //run(miniTest, drivers);
-        function main(sources) {
-            let props$ = Rx.Observable.of({name: "Hello", initial: "World"});
-            let srcs = { DOM: sources.DOM, props$: props$ }
-            const comp = gen.TextInput(val => val, srcs);
-            return {
-                DOM: comp.DOM
-            }
-        }
-
-        const drivers = {
-            DOM: makeDOMDriver("#test")
-        }
-
-        run(main, drivers);
-        done();
-        // TODO:  I think I need to do a document.querySelect here and expect the component to exist
-    })
-})
 
 describe("Cockpit and RHSM Integration tests: ", function() {
 
-    describe("Cockpit API tests => ", () => {
-        it("Tests the spawn command", (done) => {
-            // I think I need to use cockpit.spawn() and run a cp and mv command. 
-            let {result$, output$} = launch(["ls", "-al", "/home/stoner"]);
-            output$.subscribe(console.log);
-            result$.subscribe({
-                next: (res: SpawnResult) => {
-                    console.log(res);
-                    expect(res.exit_status).toBe(0);
-                    done();
-                },
-                error: (err: SpawnResult) => console.error(err)
+    describe("Helper unit tests: ", () => {
+        it("Tests the setInput", (done)=> {
+            let inputElm = document.createElement("INPUT")
+            inputElm.setAttribute("type", "text")
+            inputElm.addEventListener("input", (ev) => {
+                expect(ev.target.value).toBe("stoner")
+                done()
             })
-        }) 
+
+            setInput(Rx.Observable.of(inputElm), "stoner")
+        })
+    })
+
+
+    describe("Generic Component Tests: ", function() {    
+        it("Verifies the component is created => ", function(done) {
+            //let miniTest = testFactory(gen.TextInput)
+            //run(miniTest, drivers);
+            var comp;
+            function main(sources) {
+                let props$ = Rx.Observable.of({name: "Hello", initial: "World"});
+                let srcs = { DOM: sources.DOM, props$: props$ }
+                const GenericInp = isolate(TextInput, "generic")
+                comp = GenericInp(srcs)
+
+                return {
+                    DOM: comp.DOM
+                }
+            }
+
+            const drivers = {
+                DOM: domdriver
+            }
+
+            const dispose = run(main, drivers)
+            
+            // Figure out why the isolate with "generic" doesn't work
+            let inp = document.querySelector(".input")
+            setInput(Rx.Observable.of(inp), "Gobbledegook")  // fill the Hello input with Sean
+            if (comp)
+                comp.value.do(res => console.log(`Value stream: ${res}`))
+                .subscribe(v => {
+                    expect(v).toBe("Gobbledegook")
+                    done()
+                })
+            else 
+                fail("Could not set generic input")
+            //dispose()
+            // TODO:  I think I need to do a document.querySelect here and expect the component to exist
+        }, 30000)
+
+        xit("Verifies the ModalRegister", (done) => {
+            function main(sources) {
+                let domSrc = sources.DOM
+                let view = ModalRegister(sources.DOM)
+
+                // Programatically set our input values
+                setInput(domSrc.select("login").elements(), "stoner-cockpit")
+                setInput(domSrc.select("password").elements(), "quartermaster")
+                setInput(domSrc.select("org").elements(), "")
+                sources.DOM.select("#registration-btn").elements()
+                    .map((me: HTMLButtonElement) => {
+                        me.click()
+                    })
+
+                view.values.keys
+            }
+
+            const drivers = {
+                DOM: domdriver
+            }
+
+            const dispose = run(main, drivers)
+            done()
+            dispose()
+        })
     })
 
     describe("RHSM Configuration DBus tests using cockpit => ", () => {
@@ -154,13 +186,14 @@ describe("Cockpit and RHSM Integration tests: ", function() {
                 port: "443"
             })
             let service$ = startRegister()
-            register(service$, args$).subscribe({
+            let reg$ = register(service$, args$)
+            let subscription = reg$.subscribe({
                 next: (res) => {
                     expect(res).toBeTruthy()
                     done()
                 },
                 error: (err) => {
-                    fail("Could not register")
+                    fail("Test failed: Could not register")
                     done()
                 }
             })
