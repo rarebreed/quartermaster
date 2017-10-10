@@ -114,3 +114,31 @@ function register( start$: Rx.Observable<string>
         })
     })
 }
+
+
+/**
+ * 
+ * @param {*} start$ 
+ * @param {*} unregArgs$ 
+ */
+export 
+function unregister( start$: Rx.Observable<string>
+                   , unregArgs$: Rx.Observable<RegisterConnectionOptions> )
+                   : Rx.Observable<string> {
+    return unregArgs$.mergeMap(u => {
+        return start$.map(sock => {
+            let opts = {superuser: "require", bus: "none", address: sock}
+            let { service, proxy } = getDbusIface(RHSMIfcs.Unregister, RHSMObjs.Unregister, null, opts);
+            let args = [u]
+            console.log(`Unregargs is: ${u}`)
+            let pp = proxy.wait()
+                .then(() => proxy.call("Unregister", args, {type: "a{sv}"}))
+                .then(() => "Successful registration")
+                .catch(err => {
+                    console.error("Unable to register")
+                    console.error(err)
+                    return "Failed to register"
+                })
+        })
+    })
+}

@@ -30,6 +30,7 @@ import { curry } from "../../src/lib/lambda"
 import { setInput, runCmd } from "../lib/test-helpers"
 
 const domdriver = makeDOMDriver("#test")
+const status$ = status();
 
 function testFactory(Component) {
     return (sources) => {
@@ -163,10 +164,9 @@ describe("Cockpit and RHSM Integration tests: ", function() {
     })
 
     describe("RHSM Entitlement status tests using cockpit => ", () => {
-
+        var sub;
         it("Gets starting status of system", (done) => {
-            let status$ = status();
-            status$.subscribe({
+            sub = status$.subscribe({
                 next: (stat) => {
                     console.log(stat)
                     expect(stat).toBeTruthy()
@@ -174,9 +174,35 @@ describe("Cockpit and RHSM Integration tests: ", function() {
                 }
             })
         })
+
+        afterEach(() => {
+            if (sub) {
+                console.log("Unregistering from status$ in status tests")
+                sub.unsubscribe()
+            }
+        })
     })
 
-    describe("RHSM Registration tests using cockpit => ", () => {
+    describe("RHSM Registration tests using cockpit => ", (done) => {
+        var sub;
+        it("Unregisters with the dbus Unregister", () => {
+            let unregArgs$ = Rx.Observable.of({})
+            let service$ = startRegister()
+            let unreg$ = unregister(service$, unregArgs$)
+            let unregsub = unreg$.subscribe({
+                next: res => {
+                    console.log(`in subscribe next: ${res}`)
+                    expect(res).toBe("Successful registration")
+                    done()
+                },
+                error: err => {
+                    console.error("Failed unregister")
+                    fail()
+                    done()
+                }
+            })
+        })
+
         it("Registers with the dbus Register method", (done) => {
             let args$ = Rx.Observable.of({
                 user: "stoner-cockpit",

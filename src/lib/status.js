@@ -100,9 +100,10 @@ function makeEventState<T>(start: T) {
     })
 
     function listener(evt: any, name: any, args: any) {
-        console.log("listener was called")
+        console.log(`listener was called: ${evt} ${name} ${args}`)
         // FIXME: I think we should check for the name of the event, and only return if the name applies to us
-        subject.next({evt: evt, name: name, args: args});
+        if (name === "entitlement_status_changed")
+            subject.next({evt: evt, name: name, args: args});
     }
 
     return {
@@ -147,10 +148,7 @@ function status(): Rx.Observable<string> {
     // watching this stream will be updated with the latest status
     return statusState$.concatMap(s => {
         return evtState$
-            .map(v => {
-                v.args = s
-                return v
-            })
+            .map(v => v.args)
     });
 }
 
