@@ -93,8 +93,8 @@ function makeEventState<T>(start: T) {
     let subject = new Rx.BehaviorSubject(start);
     subject.subscribe({
         next: (v: T) => {
-            console.log("In subscribe of makeEventState")
-            console.log(v);
+            console.debug("In subscribe of makeEventState")
+            console.debug(v);
             return v;
         }
     })
@@ -145,10 +145,14 @@ function status(): Rx.Observable<string> {
     // Wrap the promise in a stream, so that we can use it with other streams
     let statusState$ = Rx.Observable.fromPromise(prmProxy);
     // This stream will emit an event whenever the entitlement_status_change signal is received, and thus any Observer
-    // watching this stream will be updated with the latest status
+    // watching this stream will be updated with the latest status.  Since we use concatMap, the first event will be the call
+    // to check_status.  There will only be one event from statusState.
     return statusState$.concatMap(s => {
+        evtState$.publish().connect()
         return evtState$
-            .map(v => v.args)
+            .scan((acc, n) => n, s)
+            .do(s => console.log(`In status(): ${JSON.stringify(s)}`))
+        //return evtState$.map(v => v.args)
     });
 }
 

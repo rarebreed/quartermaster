@@ -24,7 +24,7 @@ import Rx from "rxjs/Rx"
 import { getRhsmConf, setRhsmConf, status } from "../../src/lib/status"
 import { launch } from "../../src/lib/spawn"
 import type { SpawnResult } from "../../src/lib/spawn"
-import { startRegister, register } from "../../src/lib/registration"
+import { startRegister, register, unregister } from "../../src/lib/registration"
 import { ModalRegister } from "../../src/components/modal-register"
 import { curry } from "../../src/lib/lambda"
 import { setInput, runCmd } from "../lib/test-helpers"
@@ -45,7 +45,7 @@ function testFactory(Component) {
 
 describe("Cockpit and RHSM Integration tests: ", function() {
 
-    describe("Helper unit tests: ", () => {
+    xdescribe("Helper unit tests: ", () => {
         it("Tests the setInput", (done)=> {
             let inputElm = document.createElement("INPUT")
             inputElm.setAttribute("type", "text")
@@ -59,7 +59,7 @@ describe("Cockpit and RHSM Integration tests: ", function() {
     })
 
 
-    describe("Generic Component Tests: ", function() {    
+    xdescribe("Generic Component Tests: ", function() {    
         it("Verifies the component is created => ", function(done) {
             //let miniTest = testFactory(gen.TextInput)
             //run(miniTest, drivers);
@@ -96,7 +96,7 @@ describe("Cockpit and RHSM Integration tests: ", function() {
             // TODO:  I think I need to do a document.querySelect here and expect the component to exist
         }, 30000)
 
-        xit("Verifies the ModalRegister", (done) => {
+        it("Verifies the ModalRegister", (done) => {
             function main(sources) {
                 let domSrc = sources.DOM
                 let view = ModalRegister(sources.DOM)
@@ -123,7 +123,7 @@ describe("Cockpit and RHSM Integration tests: ", function() {
         })
     })
 
-    describe("RHSM Configuration DBus tests using cockpit => ", () => {
+    xdescribe("RHSM Configuration DBus tests using cockpit => ", () => {
         /**
          * replaces the good rhsm.conf with a known file for testing
          */
@@ -139,7 +139,7 @@ describe("Cockpit and RHSM Integration tests: ", function() {
                     expect(k.v).toBe("/subscription");
                     done();
                 })
-        })
+        }, 60000)
 
         it("Sets the server.hostname in rhsm.conf to foo.bar", (done) => {
             console.debug("Running test to st server.hostname from rhsm.conf");
@@ -157,18 +157,22 @@ describe("Cockpit and RHSM Integration tests: ", function() {
                     expect(res.v).toBe(newVal)
                     done()
                 })
-        })
+        }, 60000)
 
         // TODO: make an afteraAll function that will set the original rhsm.conf back 
         afterEach(runCmd(["mv", "/etc/rhsm/rhsm.conf.orig", "/etc/rhsm/rhsm.conf"]))
+
+        // restart the rhsm.service
+        afterAll(runCmd(["systemctl", "restart", "rhsm.service"]))
     })
 
-    describe("RHSM Entitlement status tests using cockpit => ", () => {
+    xdescribe("RHSM Entitlement status tests using cockpit => ", () => {
         var sub;
         it("Gets starting status of system", (done) => {
+            console.debug("Starting status listener tests")
             sub = status$.subscribe({
                 next: (stat) => {
-                    console.log(stat)
+                    console.log(`Status of system is: ${JSON.stringify(stat)}`)
                     expect(stat).toBeTruthy()
                     done()
                 }
@@ -183,17 +187,22 @@ describe("Cockpit and RHSM Integration tests: ", function() {
         })
     })
 
-    describe("RHSM Registration tests using cockpit => ", (done) => {
+    describe("RHSM Registration tests using cockpit => ", () => {
         var sub;
-        it("Unregisters with the dbus Unregister", () => {
+        it("Unregisters with the dbus Unregister", (done) => {
+            console.log("Start test of dbus Unregister method")
             let unregArgs$ = Rx.Observable.of({})
             let service$ = startRegister()
+            status$.subscribe(s => {
+                console.log(`In Unregister: status is ${JSON.stringify(s)}`)
+                expect(s.args[0]).toBe(5)
+                done()
+            })
             let unreg$ = unregister(service$, unregArgs$)
             let unregsub = unreg$.subscribe({
                 next: res => {
-                    console.log(`in subscribe next: ${res}`)
-                    expect(res).toBe("Successful registration")
-                    done()
+                    expect(res).toBeTruthy()
+                    console.log("After expect in unregister")
                 },
                 error: err => {
                     console.error("Failed unregister")
@@ -201,22 +210,28 @@ describe("Cockpit and RHSM Integration tests: ", function() {
                     done()
                 }
             })
-        })
+        }, 180000)
 
         it("Registers with the dbus Register method", (done) => {
+            console.log("Start test of dbus Register method")
             let args$ = Rx.Observable.of({
                 user: "stoner-cockpit",
                 password: "quartermaster",
                 org: "11348696",
-                host: "subscription.rhsm.stage.redhat.com",
-                port: "443"
+                //host: "subscription.rhsm.stage.redhat.com",
+                //port: "443"
             })
             let service$ = startRegister()
+            status$.subscribe(s => {
+                console.log(`In Register: status is ${JSON.stringify(s)}`)
+                expect(s.args[0]).toBe(0)
+                done()
+            })
             let reg$ = register(service$, args$)
             let subscription = reg$.subscribe({
                 next: (res) => {
-                    expect(res).toBeTruthy()
-                    done()
+                    console.log(res)
+                    //expect(res).toBeTruthy()
                 },
                 error: (err) => {
                     fail("Test failed: Could not register")

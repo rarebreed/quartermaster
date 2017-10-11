@@ -3,7 +3,7 @@
  */
 const cockpit = require("cockpit");
 import Rx from "rxjs/Rx";
-import {getDbusIface, RHSMIfcs, RHSMObjs, suser} from "./rhsm.dbus.js";
+import {getDbusIface, RHSMIfcs, RHSMObjs, RHSMSvc, suser} from "./rhsm.dbus.js";
 
 export type RegisterArgs = {
     user: string,
@@ -55,7 +55,6 @@ function startRegister() {
             return proxy.Start()
         })
         .then(result => {
-            console.log(result)
             return result
         })
         .catch(console.error);
@@ -85,8 +84,8 @@ function register( start$: Rx.Observable<string>
     }
 
     return regArgs$.mergeMap(regArgs => {
-        return start$.mergeMap(bus => {
-            console.log(`The socket address is ${bus}`);
+        return start$.map(bus => {
+            console.debug(`The socket address is ${bus}`);
             let opts = {superuser: "require", bus: "none", address: bus}
             let { service, proxy } = getDbusIface(RHSMIfcs.Register, RHSMObjs.Register, null, opts);
             // org, username, pw, RegisterOptions dict, RegisterConnectionOptions dict
@@ -110,7 +109,7 @@ function register( start$: Rx.Observable<string>
                     return ""
                 });
 
-            return Rx.Observable.fromPromise(prmPxy);
+            return Rx.Observable.fromPromise(prmPxy)
         })
     })
 }
@@ -127,18 +126,22 @@ function unregister( start$: Rx.Observable<string>
                    : Rx.Observable<string> {
     return unregArgs$.mergeMap(u => {
         return start$.map(sock => {
-            let opts = {superuser: "require", bus: "none", address: sock}
-            let { service, proxy } = getDbusIface(RHSMIfcs.Unregister, RHSMObjs.Unregister, null, opts);
+            //let opts = {superuser: "require", bus: "none", address: sock}
+            let { service, proxy } = getDbusIface(RHSMIfcs.Unregister, RHSMObjs.Unregister, RHSMSvc, suser);
             let args = [u]
-            console.log(`Unregargs is: ${u}`)
+            console.log(`Unregargs is: ${JSON.stringify(u)}`)
             let pp = proxy.wait()
-                .then(() => proxy.call("Unregister", args, {type: "a{sv}"}))
-                .then(() => "Successful registration")
-                .catch(err => {
-                    console.error("Unable to register")
-                    console.error(err)
-                    return "Failed to register"
+                .then(() => proxy.Unregister(args))
+                .then(p => {
+                    console.debug("Unregister method called successfully")
+                    return "Successful unregistration"
                 })
+                .catch(err => {
+                    console.error("Unable to Unregister")
+                    console.error(err)
+                    return "Failed to unregister"
+                });
+            return Rx.Observable.fromPromise(pp)
         })
     })
 }

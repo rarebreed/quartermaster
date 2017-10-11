@@ -73,7 +73,9 @@ export function getDbusIface( iface: string
                             , obj: string
                             , sName: ?Services = RHSMSvc
                             , opts: DBusOpts = {superuser: "require"}) {
+    console.debug(`Calling cockpit.dbus(${JSON.stringify(sName)}, ${JSON.stringify(opts)})`)
     let svc = cockpit.dbus(sName, opts);
+    console.debug(`Calling svc.proxy(${JSON.stringify(iface)}, ${JSON.stringify(obj)})`)
     let cfgPxy = svc.proxy(iface, obj);
     return {
         service: svc,
