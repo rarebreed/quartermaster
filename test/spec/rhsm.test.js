@@ -28,9 +28,8 @@ import { startRegister, register, unregister } from "../../src/lib/registration"
 import { ModalRegister } from "../../src/components/modal-register"
 import { curry } from "../../src/lib/lambda"
 import { setInput, runCmd } from "../lib/test-helpers"
-
-const domdriver = makeDOMDriver("#test")
-const status$ = status();
+import { RHSMDBus } from "../../src/lib/rhsm.dbus"
+const cockpit = require("cockpit")
 
 function testFactory(Component) {
     return (sources) => {
@@ -42,8 +41,19 @@ function testFactory(Component) {
     }
 }
 
-
 describe("Cockpit and RHSM Integration tests: ", function() {
+
+    const domdriver = makeDOMDriver("#test")
+    const status$ = status();
+    status$.subscribe({
+        next: n => {
+            console.log(`In rhsm.test.js: Status is now ${JSON.stringify(n)}`)
+        },
+        error: err => {
+            console.error(`In rhsm.test.js: Error occurred getting status`)
+        }
+    })
+
 
     xdescribe("Helper unit tests: ", () => {
         it("Tests the setInput", (done)=> {
@@ -188,21 +198,26 @@ describe("Cockpit and RHSM Integration tests: ", function() {
     })
 
     describe("RHSM Registration tests using cockpit => ", () => {
-        var sub;
-        it("Unregisters with the dbus Unregister", (done) => {
+        var sub = status$.subscribe(s => {
+            console.log(`In RHSM Registration: status is ${JSON.stringify(s)}`)
+            //expect(s.args[0]).toBe(5)
+            //done()
+        })
+
+        it("Tests the startRegister() function", (done) => {
+            let service$ = startRegister()
+            
+        })
+
+        xit("Unregisters with the dbus Unregister", (done) => {
             console.log("Start test of dbus Unregister method")
             let unregArgs$ = Rx.Observable.of({})
-            let service$ = startRegister()
-            status$.subscribe(s => {
-                console.log(`In Unregister: status is ${JSON.stringify(s)}`)
-                expect(s.args[0]).toBe(5)
-                done()
-            })
-            let unreg$ = unregister(service$, unregArgs$)
+            let unreg$ = unregister(unregArgs$)
             let unregsub = unreg$.subscribe({
                 next: res => {
                     expect(res).toBeTruthy()
                     console.log("After expect in unregister")
+                    done()
                 },
                 error: err => {
                     console.error("Failed unregister")
@@ -210,7 +225,7 @@ describe("Cockpit and RHSM Integration tests: ", function() {
                     done()
                 }
             })
-        }, 180000)
+        }, 30000)
 
         it("Registers with the dbus Register method", (done) => {
             console.log("Start test of dbus Register method")
@@ -222,23 +237,40 @@ describe("Cockpit and RHSM Integration tests: ", function() {
                 //port: "443"
             })
             let service$ = startRegister()
-            status$.subscribe(s => {
-                console.log(`In Register: status is ${JSON.stringify(s)}`)
-                expect(s.args[0]).toBe(0)
-                done()
-            })
             let reg$ = register(service$, args$)
             let subscription = reg$.subscribe({
                 next: (res) => {
                     console.log(res)
-                    //expect(res).toBeTruthy()
+                    expect(res).toBeTruthy()
+                    done()
                 },
                 error: (err) => {
                     fail("Test failed: Could not register")
                     done()
                 }
             })
-        }, 300000)
+        }, 30000)
+
+        xit("Unregisters with the RHSMDbus object", (done) => {
+            console.debug("Start unregister with RHSMDBus")
+            let svc = cockpit.dbus("com.redhat.RHSM1", {superuser: "require"})
+            let proxy = svc.proxy("com.redhat.RHSM1.Unregister", "/com/redhat/RHSM1/Unregister")
+            //let proxy = rhsmDBus.unregisterProxy
+            sub = status$.subscribe({
+                next: n => {
+                    console.log(`In unregister status is now: ${JSON.stringify(n)}`)
+                    expect(n.args[0]).toBe(5)
+                    done()
+                }
+            })
+            let pp = proxy.wait()
+                .then(() => proxy.call("Unregister", [{}]))
+                .then(() => "Successful unregistration")
+                .catch(err => {
+                    console.error(`Error with unregistration: ${JSON.stringify(err)}`)
+                    return "Failed unregistration"
+                })
+        })
     })
 })
 

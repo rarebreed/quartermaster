@@ -64,7 +64,7 @@ function main(sources: DOMSource) {
     let _src  = {DOM: sources.DOM, props$: props$};
 
     let status$ = getStatus().map(s => StatusView(s));
-    let input$ = TextInput(val => val, _src)
+    let input$ = TextInput(_src)
     let inputDOM = input$.DOM;
     let inputValue = input$.value;
 

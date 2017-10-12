@@ -3,25 +3,12 @@
 import Rx from "rxjs/Rx";
 
 declare module "quartermaster" {
-    declare type LabelInputProps = {
-        name: string,
-        initial: string
+    declare export class Proxy {
+        call(name: string, args: any[] | {}, sig?: {type: string}): Promise<any>;
+        wait(fn?: () => any): Promise<any>;
     }
 
-    declare type SliderInputProps = {
-        label: LabelInputProps,
-        min: number,
-        max: number,
-        unit: string
-    }
-
-    declare type LabelInputSources = {
-        DOM: any,  // This is a DOMSource, but need to convert this to a flow type
-        props$: Rx.Observable<LabelInputProps>
-    }
-
-    declare type Component<T> =  {
-        DOM: Rx.Observable<any>,   // need to figure out the type of this
-        value: Rx.Observable<T>
+    declare export class Service {
+        proxy(iface: string, obj: string): Proxy;
     }
 }

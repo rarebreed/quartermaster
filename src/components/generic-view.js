@@ -14,11 +14,33 @@
 import { div, input, label, button, tr, td, span, makeDOMDriver, DOMSource } from "@cycle/dom";
 import { VNode } from "@cycle/dom";
 import { run } from "@cycle/rxjs-run";
-import type { LabelInputProps, LabelInputSources, Component } from "quartermaster";
+//import type { LabelInputProps, LabelInputSources, Component } from "quartermaster";
 import Rx from "rxjs/Rx";
 //const cockpit = require("cockpit");
 //const _: (s: string) => string = cockpit.gettext;
 import { _ } from "../lib/lambda";
+
+export type LabelInputProps = {
+    name: string,
+    initial: string
+}
+
+export type SliderInputProps = {
+    label: LabelInputProps,
+    min: number,
+    max: number,
+    unit: string
+}
+
+export type LabelInputSources = {
+    DOM: DOMSource,  // This is a DOMSource, but need to convert this to a flow type
+    props$: Rx.Observable<LabelInputProps>
+}
+
+export type Component<T> =  {
+    DOM: Rx.Observable<any>,   // need to figure out the type of this
+    value: Rx.Observable<T>
+}
 
 function textInputIntent(domSrc: DOMSource ): Rx.Observable<string> {
     return domSrc.select(".input")

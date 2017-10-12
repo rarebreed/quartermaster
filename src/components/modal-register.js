@@ -21,7 +21,7 @@ import { VNode } from "@cycle/dom";
 import { run } from "@cycle/rxjs-run";
 import isolate from "@cycle/isolate";
 import { TextInput } from "./generic-view";
-import type { Component, LabelInputProps, LabelInputSources } from "quartermaster";
+import type { Component, LabelInputProps, LabelInputSources } from "./generic-view";
 import { id } from "../lib/lambda";
 import Rx from "rxjs/Rx";
 import type { RegisterArgs } from "../lib/registration"

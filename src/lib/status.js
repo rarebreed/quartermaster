@@ -91,6 +91,7 @@ type EntStatusSignal = {
  */
 function makeEventState<T>(start: T) {
     let subject = new Rx.BehaviorSubject(start);
+    subject.publish().connect()
     subject.subscribe({
         next: (v: T) => {
             console.debug("In subscribe of makeEventState")
@@ -122,7 +123,7 @@ function makeEventState<T>(start: T) {
 export
 function status(): Rx.Observable<string> {
     let { service, proxy } = getDbusIface(SubManIfcs.EntitlementStatus, SubManObjs.EntitlementStatus, SubManSvc);
-    let { evtState$, listener } = makeEventState({evt: "", name: "", args: ""});
+    let { evtState$, listener } = makeEventState({evt: "", name: "", args: [-1]});
 
     // First, add an event listener with the handler we created from makeEventState, then make the call to check_status
     let prmProxy = proxy.wait()
@@ -148,9 +149,8 @@ function status(): Rx.Observable<string> {
     // watching this stream will be updated with the latest status.  Since we use concatMap, the first event will be the call
     // to check_status.  There will only be one event from statusState.
     return statusState$.concatMap(s => {
-        evtState$.publish().connect()
         return evtState$
-            .scan((acc, n) => n, s)
+            .map(s => s)
             .do(s => console.log(`In status(): ${JSON.stringify(s)}`))
         //return evtState$.map(v => v.args)
     });
