@@ -26,6 +26,7 @@
     "@cycle/run": "^3.2.0",
     "@cycle/rxjs-run": "^7.1.0",
     "babel-plugin-transform-react-jsx": "^6.24.1",
+    "ramda": "^0.25.0",
     "rxjs": "^5.4.3",
     "snabbdom-jsx": "^0.3.1",
     "xstream": "^10.9.0"

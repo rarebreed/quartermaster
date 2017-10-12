@@ -3,32 +3,13 @@
  */
 const cockpit = require("cockpit");
 import Rx from "rxjs/Rx";
-import {getDbusIface, RHSMIfcs, RHSMObjs, RHSMSvc, suser} from "./rhsm.dbus.js";
-
-export type RegisterArgs = {
-    user: string,
-    password: string,
-    org: string | number,
-    keys?: Array<string> 
-}
-
-export type RegisterOptions = {
-    force?: boolean,
-    name?: string,
-    consumerid?: string,
-    environment?: string
-}
-
-// These will override what's in rhsm.conf
-export type RegisterConnectionOptions = {
-    host?: string,        // the subscription management server host
-    port?: number,        // the subscription management server port
-    handler?: string,     // the context of the subscription management server. E.g. /subscriptions
-    insecure?: boolean,   // disable TLS/SSL host verification
-    proxy_hostname?: string,
-    proxy_user?: string,
-    proxy_password?: string
-}
+import { getSvcProxy, getService, RHSMIfcs, RHSMObjs, RHSMSvc, suser} from "./rhsm.dbus.js";
+import type { RegisterArgs
+            , RegisterOptions
+            , RegisterConnectionOptions
+            , UnregisterProxy 
+            , RegisterProxy
+            , RegisterServerProxy } from "quartermaster"
 
 
 // These are all the options that could be passed.  Note that all these options must be available to be
@@ -49,13 +30,15 @@ export const registerPath = (path: string) => {
  */
 export
 function startRegister() {
-    let { service, proxy } = getDbusIface(RHSMIfcs.RegisterServer, RHSMObjs.RegisterServer);
+    //let { service, proxy } = getDbusIface(RHSMIfcs.RegisterServer, RHSMObjs.RegisterServer);
+    let service = getService(RHSMSvc, suser)
+    let proxy: RegisterServerProxy = getSvcProxy(service, "RegisterServer")
     let pxyPrm = proxy.wait()
         .then(() => {
-            return proxy.call("Start", [])
+            return proxy.Start()
+            //return proxy.call("Start", null)
         })
         .then(result => {
-            console.log(`socket = ${result}`)
             return result
         })
         .catch(console.error);
@@ -87,7 +70,12 @@ function register( start$: Rx.Observable<string>
     return start$.do(b => console.log(`The socket address ${b}`)).mergeMap(bus => {
         return regArgs$.mergeMap(regArgs => {
             let opts = {superuser: "require", bus: "none", address: bus}
-            let { service, proxy } = getDbusIface(RHSMIfcs.Register, RHSMObjs.Register, null, opts);
+            let service = getService(null, opts)
+            service.wait(() => {
+                console.log("Service is ready")
+            })
+            let proxy: RegisterProxy = getSvcProxy(service, "Register")
+            //let { service, proxy } = getDbusIface(RHSMIfcs.Register, RHSMObjs.Register, null, opts);
             // org, username, pw, RegisterOptions dict, RegisterConnectionOptions dict
             let typeSig = "sssa{sv}a{sv}";
             let regOpts = makeOpt(regArgs, ["force", "name", "consumerid", "environment"]);
@@ -99,7 +87,8 @@ function register( start$: Rx.Observable<string>
             let args = [regArgs.org, regArgs.user, regArgs.password, regOpts, regConnOpts];
             console.log(`Calling Register with these args: ${JSON.stringify(args)}`)
             let prmPxy: Promise<string> = proxy.wait()
-                .then(() => proxy.call("Register", args, {type: typeSig}))
+                //.then(() => proxy.call("Register", args, {type: typeSig}))
+                .then(() => proxy.Register(...args))
                 .then(res => { 
                     console.log(`Result of Register: ${JSON.stringify(res)}`);
                     return res;
@@ -107,7 +96,7 @@ function register( start$: Rx.Observable<string>
                 .catch(err => {
                     console.error("Failure running Register() method")
                     console.error(err)
-                    return ""
+                    return "Failed to register"
                 });
 
             return Rx.Observable.fromPromise(prmPxy)
@@ -126,11 +115,12 @@ function unregister( unregArgs$: Rx.Observable<RegisterConnectionOptions> )
                    : Rx.Observable<string> {
     return unregArgs$.mergeMap(u => {
         //let opts = {superuser: "require", bus: "none", address: sock}
-        let { service, proxy } = getDbusIface(RHSMIfcs.Unregister, RHSMObjs.Unregister, RHSMSvc, suser);
-        let args = [u]
-        console.log(`Unregargs is: ${JSON.stringify(args)}`)
+        //let { service, proxy } = getDbusIface(RHSMIfcs.Unregister, RHSMObjs.Unregister, RHSMSvc, suser);
+        let service = getService(RHSMSvc, suser)
+        let proxy: UnregisterProxy = getSvcProxy(service, "Unregister")
+        console.log(`Unregargs is: ${JSON.stringify(u)}`)
         let pp: Promise<string> = proxy.wait()
-            .then(() => proxy.call("Unregister", args))
+            .then(() => proxy.Unregister(u))
             .then(p => {
                 console.debug("Unregister method called successfully")
                 return "Successful unregistration"

@@ -206,7 +206,7 @@ describe("Cockpit and RHSM Integration tests: ", function() {
 
         it("Tests the startRegister() function", (done) => {
             let service$ = startRegister()
-            
+            service$.
         })
 
         xit("Unregisters with the dbus Unregister", (done) => {

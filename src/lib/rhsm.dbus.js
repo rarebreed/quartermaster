@@ -2,9 +2,10 @@
  * This module contains the functionality needed for access to the rhsm dbus services
  */
 const cockpit = require("cockpit");
-import type { Proxy, Service } from "quartermaster"
+import type { Proxy, Service, UnregisterProxy, RegisterProxy, RegisterServerProxy } from "quartermaster"
 import { registerPath } from "./registration"
 import Rx from "rxjs/Rx"
+import { last } from "ramda"
 
 // ====================================================================
 // The com.redhat.SubscriptionManager Interfaces and Objects
@@ -101,6 +102,10 @@ export function getProxy( svc: Service
     console.debug(`Calling svc.proxy(${JSON.stringify(iface)}, ${JSON.stringify(obj)})`)
     let cfgPxy = svc.proxy(iface, obj);
     return cfgPxy
+}
+
+export function getSvcProxy(svc: Service, ifc: string) {
+    return svc.proxy(RHSMIfcs[ifc], RHSMObjs[ifc])
 }
 
 /**
