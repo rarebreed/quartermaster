@@ -7,6 +7,14 @@ import { register, unregister, startRegister } from "../../src/lib/registration"
 const cockpit = require("cockpit")
 
 let status$ = status()
+status$.subscribe({
+    next: n => {
+        console.log(`In main:  Status is now ${n.args[0]}`)
+    },
+    error: e => {
+        console.error(`In main: Error getting status event`)
+    }
+})
 
 let sock$ = startRegister()
 let args$ = Rx.Observable.of({

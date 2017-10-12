@@ -87,8 +87,8 @@ function register( start$: Rx.Observable<string>
             let args = [regArgs.org, regArgs.user, regArgs.password, regOpts, regConnOpts];
             console.log(`Calling Register with these args: ${JSON.stringify(args)}`)
             let prmPxy: Promise<string> = proxy.wait()
-                //.then(() => proxy.call("Register", args, {type: typeSig}))
-                .then(() => proxy.Register(...args))
+                .then(() => proxy.call("Register", args, {type: typeSig}))
+                //.then(() => proxy.Register(...args))
                 .then(res => { 
                     console.log(`Result of Register: ${JSON.stringify(res)}`);
                     return res;
@@ -120,7 +120,8 @@ function unregister( unregArgs$: Rx.Observable<RegisterConnectionOptions> )
         let proxy: UnregisterProxy = getSvcProxy(service, "Unregister")
         console.log(`Unregargs is: ${JSON.stringify(u)}`)
         let pp: Promise<string> = proxy.wait()
-            .then(() => proxy.Unregister(u))
+            .then(() => proxy.call("Unregister", [u], {type: "a{sv}"}))
+            //.then(() => proxy.Unregister(u))
             .then(p => {
                 console.debug("Unregister method called successfully")
                 return "Successful unregistration"

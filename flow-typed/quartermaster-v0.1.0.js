@@ -39,17 +39,20 @@ declare module "quartermaster" {
     }
 
     declare export class UnregisterProxy extends Proxy {
-        Unregister(args: any): Promise<boolean>
+        Unregister(args: any): Promise<boolean>;
     }
 
     declare export class RegisterProxy extends Proxy {
-        Register(...args: any[]): Promise<string>
+        Register(...args: any[]): Promise<string>;
+    }
+
+    declare export class ConfigProxy extends Proxy {
+        Get(name: string): Promise<{t: string, v: string}>;
+        Set(name: string, val: string): Promise<void>;
     }
 
     declare export class Service {
         wait(fn?: () => any): Promise<any>;
-        proxy( iface: string
-             , obj: string)
-             : any;
+        proxy( iface: string, obj: string): any;
     }
 }

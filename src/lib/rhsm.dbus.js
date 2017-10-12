@@ -67,23 +67,17 @@ export const suser: DBusOpts = { superuser: "require" };
  * If the sName argument is null, then it means that the cockpit dbus interface will talk to a peer.  The DBusOpts 
  * has a setting for bus options, however, in this case, you should pass null to sName.  This is useful for the Register
  * method, since the work is actually being done over a unix socket, rather than a user, system or session bus.
- *
- * @param {*} iface name of the interface (eg com.redhat.RHSM1.Config)
- * @param {*} obj name of the object path (eg /com/redhat/RHSM1/Config)
- * @param {string} sName the name of the service (eg com.redhat.RHSM1)
- * @param {DBusOpts} opts
+ * 
+ * @param {*} sName 
+ * @param {*} ifc 
+ * @param {*} opts 
  */
-export function getDbusIface( iface: string
-                            , obj: string
-                            , sName: ?Services = RHSMSvc
-                            , opts: DBusOpts = {superuser: "require"})
-                            : { service: Service, proxy: Proxy } {
-    let svc: Service = cockpit.dbus(sName, opts);
-    console.debug(`Calling svc.proxy(${JSON.stringify(iface)}, ${JSON.stringify(obj)})`)
-    let cfgPxy: Proxy = svc.proxy(iface, obj);
+export function getDbusIface(sName: ?Services, ifc: RHSMIFTypes, opts: DBusOpts = suser) {
+    let service = getService(RHSMSvc, suser)
+    let proxy = getSvcProxy(service, "Config")
     return {
-        service: svc,
-        proxy: cfgPxy
+        service: service,
+        proxy: proxy
     }
 }
 
@@ -104,99 +98,9 @@ export function getProxy( svc: Service
     return cfgPxy
 }
 
-export function getSvcProxy(svc: Service, ifc: string) {
-    return svc.proxy(RHSMIfcs[ifc], RHSMObjs[ifc])
+export function getSvcProxy(svc: Service, ifc: string, obj?: string) {
+    if (obj == null)
+        return svc.proxy(RHSMIfcs[ifc], RHSMObjs[ifc])
+    else
+        return svc.proxy(ifc, obj)
 }
-
-/**
- * Technically, this class doesn't need to be a singleton, but it probably should be
- */
-class _RHSMDbus {
-    registerServerProxy: Proxy;
-    registerProxy: Proxy;
-    unregisterProxy: Proxy;
-    attachProxy: Proxy;
-    configProxy: Proxy;
-    entitlementsProxy: Proxy;
-    productsProxy: Proxy;
-    socket: string;
-    proxies: Map<RHSMIFTypes, Proxy>;
-    service: Service;
-    registerService: Service
-
-    constructor() {
-        this.socket = ""
-        this.service = getService(RHSMSvc, suser)
-
-        let regular = RHSMInterfaces
-            .filter(i => i !== "Register")
-            .map(i => i)
-        
-        this.registerServerProxy = this.service.proxy(RHSMIfcs.RegisterServer, RHSMObjs.RegisterServer)
-        this.unregisterProxy = this.service.proxy("com.redhat.RHSM1.Unregister", "/com/redhat/RHSM1/Unregister")
-        this.attachProxy = this.service.proxy(RHSMIfcs.Attach, RHSMObjs.Attach)
-        this.configProxy = this.service.proxy(RHSMIfcs.Config, RHSMObjs.Config)
-        this.entitlementsProxy = this.service.proxy(RHSMIfcs.Entitlement, RHSMObjs.Entitlement)
-        this.productsProxy = this.service.proxy(RHSMIfcs.Products, RHSMObjs.Products)       
-
-        let regStart$ = this.startRegister()
-        regStart$
-            .do(bus => {
-                console.log(`The bus socket is ${bus}`)
-            })
-            .map(bus => bus)
-            .subscribe({
-                next: bus => {
-                    this.socket = bus
-                    this.registerService = getService(null, {superuser: "require", bus: "none", address: bus})
-                    this.registerProxy = this.registerService.proxy(RHSMIfcs.Register, RHSMObjs.Register)
-                },
-                error: err => {
-                    console.error(`Failed to Register`)
-                    console.error(err)
-                }
-            })
-    }
-
-    _registerServerDbus() {
-        let { service, proxy } = getDbusIface(RHSMIfcs.RegisterServer, RHSMObjs.RegisterServer);
-    }
-
-    startRegister() {
-        let proxy = this.registerServerProxy
-        let pxyPrm: Promise<string> = proxy.wait()
-            .then(() => console.log("RegisterServer proxy is ready"))
-            .then(() => proxy.call("Start", []))
-            .then(result => {
-                console.log(result)
-                return result[0]
-            })
-            .catch(err => {
-                console.error(`Could not start RegisterServer ${JSON.stringify(err)}`)
-                return ""
-            });
-        return Rx.Observable.fromPromise(pxyPrm).map(s => registerPath(s));
-    }
-
-    _proxyPromises() {
-        const finished = (svc: string) => () => {
-            console.log(`Proxy ${svc} is ready`)
-        } 
-        this.registerServerProxy.wait(finished("RegisterServer"))
-        this.unregisterProxy.wait(finished("Unregister"))
-        this.attachProxy.wait(finished("Attach"))
-        this.entitlementsProxy.wait(finished("Entitlement"))
-        this.productsProxy.wait(finished("Product"))
-        this.configProxy.wait(finished("Config"))
-    }
-}
-
-const _rhsmDbus = () => {
-    let rhsm;
-    return (): _RHSMDbus => {
-        if (rhsm == null)
-            rhsm = new _RHSMDbus()
-        return rhsm
-    }
-}
-export const RHSMDBus = _rhsmDbus()

@@ -4,56 +4,15 @@
  */
 const cockpit = require("cockpit");
 import Rx from "rxjs/Rx";
-import {getDbusIface, RHSMIfcs, RHSMObjs, SubManIfcs, SubManObjs, SubManSvc} from "./rhsm.dbus.js";
-
-
-/**
- * Uses the Configuration DBus interface to get a section:key from the rhsm.conf file
- *
- * @param {*} property
- */
-export function getRhsmConf(property: string): Promise<{t: string, v: string}> {
-    let { service, proxy } = getDbusIface(RHSMIfcs.Config, RHSMObjs.Config);
-    let waitPrm = proxy.wait();
-    return waitPrm.then(() =>
-        proxy.Get(property)
-          .then(p => p)
-          .catch(e => console.log(e))
-    )
-}
-
-
-/**
- * Sets a value in rhsm.conf
- *
- * TODO: make a regex to validate vtype
- *
- * @param {*} property The (section.)key to set (eg server.hostname)
- * @param {*} value What to se the value to
- * @param {*} vtype The dbus sig type of the value (eg "s" or "i")
- */
-export function setRhsmConf( property: string
-                           , value: any
-                           , vtype: string)
-                           : Promise<{t: string, v: any}> {
-    let { service, proxy } = getDbusIface(RHSMIfcs.Config, RHSMObjs.Config);
-    let prmPxy = proxy.wait()
-    return prmPxy.then(() => {
-        return proxy.Set(property, {t: vtype, v: value})
-          .then(() => {
-            return proxy.Get(property)
-              .then(r => {
-                console.log(`In Get of Set: ${r.v}`)
-                if (r.v !== value)
-                    console.error(`Did not set the value of ${property} to ${value}`)
-                return r;
-              })
-              .catch(e => console.error(e));
-          })
-          .catch(e => console.error(e))
-    });
-}
-
+import { getService
+       , getSvcProxy
+       , RHSMIfcs
+       , RHSMObjs
+       , SubManIfcs
+       , SubManObjs
+       , SubManSvc
+       , suser
+       } from "./rhsm.dbus.js";
 
 // These are the possible return values from check_status (taken from cert_sorter.py)
 type StatusTypes = "UNKNOWN" 
@@ -100,9 +59,8 @@ function makeEventState<T>(start: T) {
         }
     })
 
-    function listener(evt: any, name: any, args: any) {
+    const listener = (evt: any, name: any, args: any) => {
         console.log(`listener was called: ${evt} ${name} ${args}`)
-        // FIXME: I think we should check for the name of the event, and only return if the name applies to us
         if (name === "entitlement_status_changed")
             subject.next({evt: evt, name: name, args: args});
     }
@@ -122,12 +80,14 @@ function makeEventState<T>(start: T) {
  */
 export
 function status(): Rx.Observable<string> {
-    let { service, proxy } = getDbusIface(SubManIfcs.EntitlementStatus, SubManObjs.EntitlementStatus, SubManSvc);
+    let service = getService(SubManSvc, suser)
+    let proxy = getSvcProxy(service, SubManIfcs.EntitlementStatus, SubManObjs.EntitlementStatus)
     let { evtState$, listener } = makeEventState({evt: "", name: "", args: [-1]});
 
     // First, add an event listener with the handler we created from makeEventState, then make the call to check_status
     let prmProxy = proxy.wait()
         .then(() => {
+            console.debug("Adding entitlement_status_change listener")
             proxy.addEventListener("signal", listener)
         })
         .then(() => proxy.call("check_status", []))
@@ -148,12 +108,9 @@ function status(): Rx.Observable<string> {
     // This stream will emit an event whenever the entitlement_status_change signal is received, and thus any Observer
     // watching this stream will be updated with the latest status.  Since we use concatMap, the first event will be the call
     // to check_status.  There will only be one event from statusState.
-    return statusState$.concatMap(s => {
-        return evtState$
-            .map(s => s)
-            .do(s => console.log(`In status(): ${JSON.stringify(s)}`))
-        //return evtState$.map(v => v.args)
-    });
+    return statusState$.concatMap(s => evtState$
+            .map(evt => evt)
+            .do(r => console.log(`In status(): ${JSON.stringify(r)}`)));
 }
 
 function statusListener(evt, name, args) {

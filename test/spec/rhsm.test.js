@@ -21,14 +21,14 @@ import { makeDOMDriver } from "@cycle/dom"
 import { run } from "@cycle/rxjs-run"
 import isolate from "@cycle/isolate"
 import Rx from "rxjs/Rx"
-import { getRhsmConf, setRhsmConf, status } from "../../src/lib/status"
+import { status } from "../../src/lib/status"
+import { getRhsmConf, setRhsmConf } from "../../src/lib/config"
 import { launch } from "../../src/lib/spawn"
 import type { SpawnResult } from "../../src/lib/spawn"
 import { startRegister, register, unregister } from "../../src/lib/registration"
 import { ModalRegister } from "../../src/components/modal-register"
-import { curry } from "../../src/lib/lambda"
+import { curry } from "../../src/lib/lambda/lambda"
 import { setInput, runCmd } from "../lib/test-helpers"
-import { RHSMDBus } from "../../src/lib/rhsm.dbus"
 const cockpit = require("cockpit")
 
 function testFactory(Component) {
@@ -206,7 +206,6 @@ describe("Cockpit and RHSM Integration tests: ", function() {
 
         it("Tests the startRegister() function", (done) => {
             let service$ = startRegister()
-            service$.
         })
 
         xit("Unregisters with the dbus Unregister", (done) => {
@@ -250,27 +249,6 @@ describe("Cockpit and RHSM Integration tests: ", function() {
                 }
             })
         }, 30000)
-
-        xit("Unregisters with the RHSMDbus object", (done) => {
-            console.debug("Start unregister with RHSMDBus")
-            let svc = cockpit.dbus("com.redhat.RHSM1", {superuser: "require"})
-            let proxy = svc.proxy("com.redhat.RHSM1.Unregister", "/com/redhat/RHSM1/Unregister")
-            //let proxy = rhsmDBus.unregisterProxy
-            sub = status$.subscribe({
-                next: n => {
-                    console.log(`In unregister status is now: ${JSON.stringify(n)}`)
-                    expect(n.args[0]).toBe(5)
-                    done()
-                }
-            })
-            let pp = proxy.wait()
-                .then(() => proxy.call("Unregister", [{}]))
-                .then(() => "Successful unregistration")
-                .catch(err => {
-                    console.error(`Error with unregistration: ${JSON.stringify(err)}`)
-                    return "Failed unregistration"
-                })
-        })
     })
 })
 
