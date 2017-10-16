@@ -180,13 +180,7 @@ describe("Cockpit and RHSM Integration tests: ", function() {
         var sub;
         it("Gets starting status of system", (done) => {
             console.debug("Starting status listener tests")
-            sub = status$.subscribe({
-                next: (stat) => {
-                    console.log(`Status of system is: ${JSON.stringify(stat)}`)
-                    expect(stat).toBeTruthy()
-                    done()
-                }
-            })
+            
         })
 
         afterEach(() => {
@@ -202,10 +196,6 @@ describe("Cockpit and RHSM Integration tests: ", function() {
             console.log(`In RHSM Registration: status is ${JSON.stringify(s)}`)
             //expect(s.args[0]).toBe(5)
             //done()
-        })
-
-        it("Tests the startRegister() function", (done) => {
-            let service$ = startRegister()
         })
 
         xit("Unregisters with the dbus Unregister", (done) => {
@@ -226,7 +216,7 @@ describe("Cockpit and RHSM Integration tests: ", function() {
             })
         }, 30000)
 
-        it("Registers with the dbus Register method", (done) => {
+        xit("Registers with the dbus Register method", (done) => {
             console.log("Start test of dbus Register method")
             let args$ = Rx.Observable.of({
                 user: "stoner-cockpit",

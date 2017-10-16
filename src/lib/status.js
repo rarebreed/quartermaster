@@ -91,13 +91,6 @@ function status(): Rx.Observable<string> {
             proxy.addEventListener("signal", listener)
         })
         .then(() => proxy.call("check_status", []))
-        .then((r) => {
-            console.debug(`After call to check_status: ${r[0]}`)
-            if (r == undefined)
-                return "UNKNOWN";
-            else
-                return EntitlementStatus.get(r[0])
-        })
         .catch(err => {
             console.error("Could not get check_status")
             console.error(err)
@@ -121,26 +114,27 @@ function statusListener(evt, name, args) {
     console.log("====================")
 }
 
-
 /**
- * Uses the EntitlementStatus DBus interface method check_status to get current status
+ * This test shows that makeEventState produces a "hot" Subject.  The first subscriber will get all the 
+ * events.  The second subscriber, since it is starting with a 8 second timeout, will only get some of 
+ * the events.  Notice that it might get more than 4 events due to timing issues.
+ * 
+ * This test shows that the evtState$ is updated with the latest state when the listener is called.
  */
-export function getStatus(): Promise<string> {
-    //let svc = cockpit.dbus(SubManSvc, suser);
-    //let proxy = svc.proxy(SubManIfcs.EntitlementStatus, SubManObjs.EntitlementStatus);
-    let { service, proxy } = getDbusIface(SubManIfcs.EntitlementStatus, SubManObjs.EntitlementStatus, SubManSvc);
-    let pproxy = proxy.wait();
-    return pproxy
-      .then(() => {
-          proxy.addEventListener("signal", statusListener);
-      })
-      .then(() => {
-          let statProm = proxy.call("check_status", []);
-          return statProm;
-      })
-      .then(r => {
-          let mapped = EntitlementStatus.get(r[0]);
-          return mapped;
-      })
-      .catch(err => console.log(err))
+export function testMakeEventState() {
+    let { evtState$, listener } = makeEventState({event: "", name: "", args: [-1]})
+    evtState$.subscribe({
+        next: n => {
+            console.log(`From A evtState$: ${n.args}`)
+        }
+    })
+
+    let test = Rx.Observable.interval(1000)
+        .take(12)
+        .map(i => listener("test", "entitlement_status_changed", [i]))
+        .subscribe(t => console.log(`In test`))
+
+    setTimeout(() => {
+        evtState$.subscribe(n => console.log(`From B evtState$: ${n.args}`))
+    }, 8000)
 }

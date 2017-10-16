@@ -11,6 +11,17 @@
             "outFiles": [
                 "${workspaceRoot}/build/src/**/*.js"
             ]
+        },
+        {
+            "name": "Launch flow-test program",
+            "type": "node",
+            "request": "launch",
+            "sourceMaps": true,
+            "preLaunchTask": "flow-test",
+            "program": "${file}",
+            "outFiles": [
+                "${workspaceRoot}/build/test/**/*.js"
+            ]
         }
     ]
 }

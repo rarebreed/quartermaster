@@ -8,9 +8,16 @@
             "script": "install",
             "problemMatcher": []
         },
-        {   "type": "npm",
+        {
+            "type": "npm",
             "script": "flow-src",
             "identifier": "flow-src",
+            "problemMatcher": []
+        },
+        {
+            "type": "npm",
+            "script": "flow-test",
+            "identifier": "flow-test",
             "problemMatcher": []
         }
     ]
